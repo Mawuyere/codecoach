@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PyCoach — Learn Python with AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="../../js/env.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="../../js/auth.js"></script>
+<style>
+:root {
+  --bg: #0d1117; --surface: #161b22; --surface2: #1f2937;
+  --border: #30363d; --text: #e6edf3; --muted: #7d8590;
+  --accent: #f7c948; --accent2: #3fb68b; --accent3: #58a6ff;
+  --danger: #f85149; --py-blue: #306998; --py-yellow: #FFD43B;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; overflow:hidden; }
+body { background:var(--bg); color:var(--text); font-family:'JetBrains Mono',monospace; }
+
+/* ── APP LAYOUT ── */
+.app { display:flex; height:100vh; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width:240px; min-width:240px; background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex; flex-direction:column; overflow:hidden;
+}
+.logo {
+  padding:1rem 1.25rem; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:0.6rem; flex-shrink:0;
+}
+.logo-icon {
+  width:28px; height:28px; border-radius:6px;
+  background:linear-gradient(135deg,var(--py-blue),var(--py-yellow));
+  display:flex; align-items:center; justify-content:center;
+  font-size:0.75rem; font-weight:800; color:#fff; font-family:'Syne',sans-serif;
+}
+.logo-text { font-family:'Syne',sans-serif; font-weight:800; font-size:0.95rem; }
+.logo-text span { color:var(--py-yellow); }
+
+.user-pill {
+  padding:0.6rem 1.25rem; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:0.5rem; flex-shrink:0;
+}
+.user-avatar {
+  width:26px; height:26px; border-radius:50%;
+  background:linear-gradient(135deg,var(--py-blue),var(--accent3));
+  display:flex; align-items:center; justify-content:center;
+  font-size:0.65rem; font-weight:700; color:#fff; font-family:'Syne',sans-serif;
+}
+.user-info { flex:1; min-width:0; }
+.user-name-text { font-size:0.7rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.user-level-text { font-size:0.58rem; color:var(--muted); }
+
+.progress-wrap {
+  padding:0.75rem 1.25rem; border-bottom:1px solid var(--border); flex-shrink:0;
+}
+.progress-label {
+  display:flex; justify-content:space-between; align-items:center;
+  font-size:0.6rem; color:var(--muted); text-transform:uppercase;
+  letter-spacing:0.1em; margin-bottom:0.4rem;
+}
+.progress-track {
+  height:3px; background:var(--border); border-radius:99px; overflow:hidden;
+}
+.progress-fill {
+  height:100%; width:0%; border-radius:99px;
+  background:linear-gradient(90deg,var(--py-blue),var(--py-yellow));
+  transition:width 0.5s ease;
+}
+
+.module-list { flex:1; overflow-y:auto; padding:0.5rem 0; }
+.module-list::-webkit-scrollbar { width:3px; }
+.module-list::-webkit-scrollbar-thumb { background:var(--border); border-radius:99px; }
+
+.section-header {
+  display:flex; align-items:center; gap:0.4rem;
+  padding:0.7rem 1.25rem 0.3rem;
+  font-size:0.58rem; letter-spacing:0.15em; color:var(--muted);
+}
+.section-dot { width:6px; height:6px; border-radius:50%; display:inline-block; }
+
+.module-item {
+  display:flex; align-items:center; gap:0.5rem;
+  padding:0.55rem 1.25rem; cursor:pointer;
+  transition:background 0.15s; border-left:2px solid transparent;
+}
+.module-item:hover { background:rgba(255,255,255,0.03); }
+.module-item.active {
+  background:rgba(247,201,72,0.08); border-left-color:var(--accent);
+}
+.module-item.active .module-name-text { color:var(--text); }
+.module-num-text { font-size:0.6rem; color:var(--muted); min-width:16px; }
+.module-name-text { font-size:0.68rem; color:var(--muted); flex:1; }
+.module-item.active .module-num-text { color:var(--accent); }
+
+.status-dot {
+  width:7px; height:7px; border-radius:50%; flex-shrink:0;
+}
+.dot-empty { background:var(--border); }
+.dot-active { background:var(--accent); box-shadow:0 0 6px var(--accent); }
+.dot-done { background:var(--accent2); }
+
+.sidebar-footer {
+  padding:0.75rem 1.25rem; border-top:1px solid var(--border);
+  display:flex; justify-content:space-between; align-items:center; flex-shrink:0;
+}
+.xp-badge-sb, .streak-badge-sb {
+  font-size:0.65rem; color:var(--muted);
+  background:var(--surface2); border:1px solid var(--border);
+  padding:0.2rem 0.5rem; border-radius:99px;
+}
+
+/* ── MAIN PANEL ── */
+.main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+
+.top-bar {
+  height:52px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 1.5rem; flex-shrink:0; background:var(--surface);
+}
+.top-bar-left h2 {
+  font-family:'Syne',sans-serif; font-size:0.95rem; font-weight:700;
+}
+.top-bar-left p {
+  font-size:0.6rem; color:var(--muted); margin-top:1px;
+}
+.top-bar-right { display:flex; gap:0.5rem; align-items:center; }
+.level-chip {
+  padding:0.2rem 0.65rem; border-radius:99px; font-size:0.6rem; font-weight:600;
+  background:rgba(247,201,72,0.12); color:var(--accent); border:1px solid rgba(247,201,72,0.3);
+}
+.xp-chip {
+  padding:0.2rem 0.65rem; border-radius:99px; font-size:0.6rem;
+  background:var(--surface2); border:1px solid var(--border); color:var(--muted);
+}
+
+/* ── CONTENT AREA ── */
+.content-area {
+  flex:1; display:flex; overflow:hidden;
+}
+
+/* ── LESSON PANEL ── */
+.lesson-panel {
+  flex:1; overflow-y:auto; padding:1.5rem;
+  display:flex; flex-direction:column; gap:1.25rem;
+}
+.lesson-panel::-webkit-scrollbar { width:4px; }
+.lesson-panel::-webkit-scrollbar-thumb { background:var(--border); border-radius:99px; }
+
+.completion-banner {
+  background:rgba(63,182,139,0.1); border:1px solid rgba(63,182,139,0.3);
+  border-radius:10px; padding:1rem 1.25rem;
+  display:none; align-items:center; gap:0.75rem;
+}
+.completion-banner.show { display:flex; }
+.cb-title { font-family:'Syne',sans-serif; font-weight:700; font-size:0.85rem; }
+.cb-sub { font-size:0.7rem; color:var(--muted); margin-top:2px; }
+
+.lesson-card, .quiz-card, .challenge-card {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:12px; overflow:hidden;
+}
+.card-header {
+  display:flex; align-items:center; gap:0.75rem;
+  padding:1rem 1.25rem; border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,0.02);
+}
+.card-icon { font-size:1.3rem; }
+.card-title { font-family:'Syne',sans-serif; font-weight:700; font-size:0.9rem; }
+.card-subtitle { font-size:0.62rem; color:var(--muted); margin-top:2px; }
+.card-body { padding:1.25rem; display:flex; flex-direction:column; gap:1rem; }
+
+.concept-box, .analogy-box, .rw-box {
+  padding:0.9rem 1rem; border-radius:8px;
+}
+.concept-box { background:rgba(88,166,255,0.06); border:1px solid rgba(88,166,255,0.15); }
+.analogy-box { background:rgba(247,201,72,0.06); border:1px solid rgba(247,201,72,0.15); }
+.rw-box { background:rgba(63,182,139,0.06); border:1px solid rgba(63,182,139,0.15); }
+.concept-box h4, .analogy-box h4, .rw-box h4 {
+  font-family:'Syne',sans-serif; font-size:0.75rem; font-weight:700; margin-bottom:0.4rem;
+}
+.concept-box p, .analogy-box p, .rw-box p {
+  font-size:0.73rem; line-height:1.7; color:var(--muted);
+}
+
+.code-label {
+  font-size:0.62rem; letter-spacing:0.1em; text-transform:uppercase;
+  color:var(--muted); display:flex; align-items:center; gap:0.4rem;
+}
+.code-block {
+  background:#010409; border:1px solid var(--border);
+  border-radius:8px; padding:1rem; overflow-x:auto;
+}
+.code-lines { display:flex; flex-direction:column; gap:1px; }
+.code-line { font-size:0.75rem; line-height:1.6; white-space:pre; min-height:1.2em; }
+
+/* Code syntax colors */
+.ck { color:#ff7b72; }   /* keyword */
+.cf { color:#d2a8ff; }   /* function */
+.cs { color:#a5d6ff; }   /* string */
+.cn { color:#79c0ff; }   /* number */
+.cc { color:#8b949e; font-style:italic; }  /* comment */
+.co { color:#3fb68b; }   /* output */
+
+.use-cases { display:flex; flex-wrap:wrap; gap:0.4rem; }
+.use-case-tag {
+  padding:0.2rem 0.6rem; background:rgba(48,105,152,0.2);
+  border:1px solid rgba(88,166,255,0.2); border-radius:99px;
+  font-size:0.62rem; color:var(--accent3);
+}
+
+/* QUIZ */
+.quiz-question {
+  font-size:0.8rem; line-height:1.6; font-weight:600; margin-bottom:0.75rem;
+}
+.quiz-opts { display:flex; flex-direction:column; gap:0.5rem; }
+.quiz-opt {
+  display:flex; align-items:center; gap:0.75rem;
+  padding:0.65rem 0.9rem; background:var(--surface2);
+  border:1px solid var(--border); border-radius:8px;
+  font-family:'JetBrains Mono',monospace; font-size:0.72rem;
+  color:var(--text); cursor:pointer; text-align:left;
+  transition:all 0.15s;
+}
+.quiz-opt:hover:not(:disabled) { border-color:var(--accent3); background:rgba(88,166,255,0.06); }
+.quiz-opt.correct { border-color:var(--accent2); background:rgba(63,182,139,0.1); color:var(--accent2); }
+.quiz-opt.wrong { border-color:var(--danger); background:rgba(248,81,73,0.1); color:var(--danger); }
+.quiz-opt-letter {
+  width:22px; height:22px; border-radius:5px; background:var(--border);
+  display:flex; align-items:center; justify-content:center;
+  font-size:0.65rem; font-weight:700; flex-shrink:0;
+}
+.quiz-feedback {
+  padding:0.7rem 0.9rem; border-radius:8px; font-size:0.72rem; line-height:1.6;
+  margin-top:0.5rem; display:none;
+}
+.quiz-feedback.correct { background:rgba(63,182,139,0.1); border:1px solid rgba(63,182,139,0.3); color:var(--accent2); display:block; }
+.quiz-feedback.wrong   { background:rgba(248,81,73,0.1);  border:1px solid rgba(248,81,73,0.3);  color:var(--danger);  display:block; }
+
+/* CHALLENGE */
+.challenge-desc {
+  font-size:0.73rem; line-height:1.7; color:var(--muted);
+  padding:0.8rem 1rem; background:var(--surface2);
+  border-radius:8px; border:1px solid var(--border);
+}
+.code-editor {
+  width:100%; min-height:160px; background:#010409;
+  border:1px solid var(--border); border-radius:8px;
+  color:var(--text); font-family:'JetBrains Mono',monospace;
+  font-size:0.75rem; padding:1rem; resize:vertical;
+  outline:none; line-height:1.6; transition:border-color 0.2s;
+}
+.code-editor:focus { border-color:var(--accent3); }
+
+.hints-section { display:flex; gap:0.4rem; flex-wrap:wrap; }
+.hint-btn {
+  padding:0.3rem 0.7rem; background:var(--surface2);
+  border:1px solid var(--border); border-radius:6px;
+  font-family:'JetBrains Mono',monospace; font-size:0.65rem;
+  color:var(--muted); cursor:pointer; transition:all 0.15s;
+}
+.hint-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+.hint-display {
+  padding:0.7rem 1rem; background:rgba(247,201,72,0.06);
+  border:1px solid rgba(247,201,72,0.2); border-radius:8px;
+  font-size:0.72rem; line-height:1.6; color:var(--muted);
+}
+
+.submit-btn {
+  padding:0.7rem 1.5rem; background:var(--accent); color:#000;
+  border:none; border-radius:8px; font-family:'Syne',sans-serif;
+  font-weight:700; font-size:0.85rem; cursor:pointer; transition:all 0.15s;
+  align-self:flex-start;
+}
+.submit-btn:hover { background:#ffe066; transform:translateY(-1px); }
+
+.code-result {
+  padding:0.75rem 1rem; border-radius:8px; font-size:0.72rem; line-height:1.6;
+}
+.code-result.success { background:rgba(63,182,139,0.1); border:1px solid rgba(63,182,139,0.3); color:var(--accent2); }
+.code-result.partial  { background:rgba(247,201,72,0.08); border:1px solid rgba(247,201,72,0.2); color:var(--accent); }
+
+.next-section { display:flex; justify-content:flex-end; padding-bottom:1rem; }
+.next-btn {
+  padding:0.7rem 1.5rem; background:transparent;
+  border:1px solid var(--border); border-radius:8px;
+  color:var(--muted); font-family:'JetBrains Mono',monospace;
+  font-size:0.75rem; cursor:pointer; transition:all 0.15s;
+}
+.next-btn:hover { border-color:var(--accent3); color:var(--accent3); }
+
+/* ── CHAT PANEL ── */
+.chat-panel {
+  width:320px; min-width:320px; border-left:1px solid var(--border);
+  display:flex; flex-direction:column; background:var(--surface);
+}
+.chat-header {
+  padding:0.85rem 1rem; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:0.6rem; flex-shrink:0;
+}
+.coach-avatar {
+  width:32px; height:32px; border-radius:50%;
+  background:linear-gradient(135deg,var(--py-blue),var(--py-yellow));
+  display:flex; align-items:center; justify-content:center; font-size:1rem;
+}
+.coach-name { font-family:'Syne',sans-serif; font-weight:700; font-size:0.8rem; }
+.coach-status { font-size:0.6rem; color:var(--accent2); }
+
+.chat-feed {
+  flex:1; overflow-y:auto; padding:0.75rem;
+  display:flex; flex-direction:column; gap:0.6rem;
+}
+.chat-feed::-webkit-scrollbar { width:3px; }
+.chat-feed::-webkit-scrollbar-thumb { background:var(--border); border-radius:99px; }
+
+.msg { display:flex; flex-direction:column; max-width:90%; }
+.msg.coach { align-self:flex-start; }
+.msg.user  { align-self:flex-end; }
+.msg-sender { font-size:0.58rem; color:var(--muted); margin-bottom:0.2rem; }
+.msg-bubble {
+  padding:0.6rem 0.8rem; border-radius:10px;
+  font-size:0.72rem; line-height:1.6;
+}
+.msg.coach .msg-bubble {
+  background:var(--surface2); border:1px solid var(--border);
+  border-top-left-radius:2px;
+}
+.msg.user .msg-bubble {
+  background:rgba(48,105,152,0.25); border:1px solid rgba(88,166,255,0.2);
+  border-top-right-radius:2px; color:#c0d7f0;
+}
+
+.quick-prompts {
+  padding:0.4rem 0.6rem; border-top:1px solid var(--border);
+  display:flex; flex-wrap:wrap; gap:0.3rem; flex-shrink:0;
+}
+.qp-btn {
+  padding:0.2rem 0.5rem; background:var(--surface2);
+  border:1px solid var(--border); border-radius:99px;
+  font-size:0.6rem; color:var(--muted); cursor:pointer; transition:all 0.12s;
+}
+.qp-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+.chat-input-row {
+  display:flex; gap:0.35rem; padding:0.5rem 0.6rem;
+  border-top:1px solid var(--border); flex-shrink:0;
+}
+.chat-input {
+  flex:1; background:var(--surface2); border:1px solid var(--border);
+  border-radius:7px; color:var(--text); font-family:'JetBrains Mono',monospace;
+  font-size:0.7rem; padding:0.45rem 0.65rem; outline:none; resize:none;
+  height:34px; transition:border-color 0.15s;
+}
+.chat-input:focus { border-color:var(--accent3); }
+.send-btn {
+  padding:0 0.75rem; background:var(--accent); color:#000;
+  border:none; border-radius:7px; cursor:pointer; font-size:0.85rem;
+  transition:all 0.12s;
+}
+.send-btn:hover { background:#ffe066; }
+
+.typing-indicator { display:flex; gap:3px; align-items:center; padding:2px 0; }
+.typing-indicator span {
+  width:5px; height:5px; background:var(--muted);
+  border-radius:50%; animation:bounce 1.2s ease-in-out infinite;
+}
+.typing-indicator span:nth-child(2) { animation-delay:0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay:0.4s; }
+@keyframes bounce {
+  0%,80%,100% { transform:translateY(0); }
+  40% { transform:translateY(-5px); }
+}
+
+/* ── TOASTS ── */
+#xp-toast {
+  position:fixed; bottom:1.5rem; right:1.5rem;
+  background:var(--accent); color:#000;
+  padding:0.5rem 1rem; border-radius:99px;
+  font-family:'Syne',sans-serif; font-weight:700; font-size:0.85rem;
+  transform:translateY(60px); opacity:0; transition:all 0.25s;
+  z-index:100; pointer-events:none;
+}
+#xp-toast.show { transform:translateY(0); opacity:1; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="logo">
+      <a href="../../index.html" style="display:flex;align-items:center;gap:0.6rem;text-decoration:none;color:inherit">
+        <div class="logo-icon">CC</div>
+        <span class="logo-text">Code<span>Coach</span></span>
+      </a>
+    </div>
+
+    <div class="user-pill">
+      <div class="user-avatar" id="user-avatar">G</div>
+      <div class="user-info">
+        <div class="user-name-text" id="user-name">Guest</div>
+        <div class="user-level-text" id="user-level">Python Beginner</div>
+      </div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span>COURSE PROGRESS</span>
+        <span id="pct-label">0%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+    </div>
+
+    <div class="module-list" id="module-list"></div>
+
+    <div class="sidebar-footer">
+      <span class="xp-badge-sb" id="xp-badge">⚡ 0 XP</span>
+      <span class="streak-badge-sb" id="streak-badge">🔥 0</span>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <h2 id="module-title">Module 01 — Variables &amp; Data Types</h2>
+        <p id="module-breadcrumb">Python Course › Beginner Track</p>
+      </div>
+      <div class="top-bar-right">
+        <span class="level-chip" id="level-badge">Beginner</span>
+        <span class="xp-chip" id="xp-top">⚡ 0 XP</span>
+      </div>
+    </div>
+
+    <div class="content-area">
+      <!-- LESSON PANEL -->
+      <div class="lesson-panel" id="lesson-panel">
+        <div style="color:var(--muted);font-size:0.8rem;padding:2rem;text-align:center">Loading...</div>
+      </div>
+
+      <!-- CHAT PANEL -->
+      <div class="chat-panel">
+        <div class="chat-header">
+          <div class="coach-avatar">🐍</div>
+          <div>
+            <div class="coach-name">Coach Py</div>
+            <div class="coach-status">● Online · ready to help</div>
+          </div>
+        </div>
+
+        <div class="chat-feed" id="chat-feed"></div>
+
+        <div class="quick-prompts">
+          <button class="qp-btn" onclick="quickPrompt('Explain this more simply')">Simpler please</button>
+          <button class="qp-btn" onclick="quickPrompt('Give me another example')">More examples</button>
+          <button class="qp-btn" onclick="quickPrompt('Give me a hint for the challenge')">Hint plz</button>
+          <button class="qp-btn" onclick="quickPrompt('Quiz me on this topic')">Quiz me</button>
+        </div>
+
+        <div class="chat-input-row">
+          <textarea class="chat-input" id="chat-input" placeholder="Ask Coach Py anything..." rows="1"></textarea>
+          <button class="send-btn" onclick="sendMessage()">↑</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="xp-toast"></div>
+
+<script>
+// MODULES DATA INJECTED BELOW
+const MODULES = [{"title": "Variables & Data Types", "icon": "📦", "level": "Beginner", "concept": "A variable is a named container for data. You give it a name, store data inside, and access it any time. Python figures out the type automatically — no need to declare it like in Java or C.", "analogy": "Think of variables like phone contacts. You store a number under a name. When you need it, you look up the name — not the raw number.", "code": ["<span class=\"cc\"># name = value</span>", "<span class=\"cf\">name</span> = <span class=\"cs\">\"Amara\"</span>  <span class=\"cc\"># str — text</span>", "<span class=\"cf\">age</span> = <span class=\"cn\">27</span>      <span class=\"cc\"># int — whole number</span>", "<span class=\"cf\">height</span> = <span class=\"cn\">1.72</span>    <span class=\"cc\"># float — decimal</span>", "<span class=\"cf\">is_student</span> = <span class=\"cn\">True</span>  <span class=\"cc\"># bool</span>", "", "<span class=\"cc\"># Print values</span>", "<span class=\"cf\">print</span>(name)    <span class=\"co\"># → Amara</span>", "<span class=\"cf\">print</span>(<span class=\"cf\">type</span>(age)) <span class=\"co\"># → &lt;class 'int'&gt;</span>", "", "<span class=\"cc\"># Update any time</span>", "age = <span class=\"cn\">28</span>", "<span class=\"cf\">print</span>(age)     <span class=\"co\"># → 28</span>"], "realWorld": "Every program uses variables. A web app stores the user's name. A data script stores row counts. A game stores the score.", "useCases": ["Web sessions", "Data pipelines", "Games", "APIs", "Config scripts"], "quiz": {"q": "What type stores a decimal number like 19.99?", "opts": [{"t": "str", "ok": false, "fb": "str stores text, not numbers."}, {"t": "float", "ok": true, "fb": "Correct! Decimals are floats."}, {"t": "bool", "ok": false, "fb": "bool is only True/False."}, {"t": "int", "ok": false, "fb": "int is whole numbers only."}]}, "challenge": "Create 4 variables: name (string), age (int), gpa (float), enrolled (True). Print each on its own line.", "starter": "# Your profile card\nname = ?\nage = ?\ngpa = ?\nenrolled = ?\n", "hints": ["name = 'Your Name'", "gpa needs a decimal: 3.8", "enrolled = True  (capital T)", "Use 4 print() calls"], "vkeys": ["name var", "age var", "gpa var", "enrolled", "prints"], "vpats": ["name\\s*=\\s*['\"]", "age\\s*=\\s*\\d+", "gpa\\s*=\\s*\\d+\\.\\d+", "enrolled\\s*=\\s*True", "print"]}, {"title": "Strings & Text", "icon": "✍️", "level": "Beginner", "concept": "A string is text between quotes. Python has rich tools to manipulate strings — join, split, search, format. Almost every real program deals heavily with text.", "analogy": "A string is like a necklace of beads. Each bead is a character. You can count them, pick individual ones, slice sections, or rearrange them.", "code": ["<span class=\"cc\"># String basics</span>", "greeting = <span class=\"cs\">\"Hello, World!\"</span>", "<span class=\"cf\">print</span>(<span class=\"cf\">len</span>(greeting))    <span class=\"co\"># → 13</span>", "<span class=\"cf\">print</span>(greeting.<span class=\"cf\">upper</span>()) <span class=\"co\"># → HELLO, WORLD!</span>", "<span class=\"cf\">print</span>(greeting[<span class=\"cn\">0</span>])      <span class=\"co\"># → H (first char)</span>", "<span class=\"cf\">print</span>(greeting[<span class=\"cn\">0</span>:<span class=\"cn\">5</span>]) <span class=\"co\"># → Hello (slice)</span>", "", "<span class=\"cc\"># Joining strings</span>", "full = <span class=\"cs\">\"Ada\"</span> + <span class=\"cs\">\" \"</span> + <span class=\"cs\">\"Lovelace\"</span>", "<span class=\"cf\">print</span>(full)          <span class=\"co\"># → Ada Lovelace</span>", "", "<span class=\"cc\"># f-strings — best formatting</span>", "age = <span class=\"cn\">36</span>", "<span class=\"cf\">print</span>(<span class=\"cs\">f\"Name: {full}, Age: {age}\"</span>)", "", "<span class=\"cc\"># Useful methods</span>", "email = <span class=\"cs\">\"  user@example.com  \"</span>", "<span class=\"cf\">print</span>(email.<span class=\"cf\">strip</span>())       <span class=\"co\"># removes spaces</span>", "<span class=\"cf\">print</span>(email.<span class=\"cf\">replace</span>(<span class=\"cs\">\"example\"</span>, <span class=\"cs\">\"gmail\"</span>))"], "realWorld": "Web apps clean form inputs with strip/lower. Email systems parse addresses. Search engines tokenize text. Every time you handle user input — names, emails, messages — you use strings.", "useCases": ["Form validation", "Email parsing", "Search", "Data cleaning", "Chatbots"], "quiz": {"q": "What does print(\"hello\"[1]) output?", "opts": [{"t": "h", "ok": false, "fb": "Index 0 is h. Index 1 is the second character."}, {"t": "e", "ok": true, "fb": "Correct! Python uses 0-based indexing."}, {"t": "hello", "ok": false, "fb": "A single index returns ONE character."}, {"t": "1", "ok": false, "fb": "Indexing returns the character, not the number."}]}, "challenge": "Username formatter: given raw = '  John DOE  ', strip whitespace, lowercase, replace space with underscore. Print result. Expected: john_doe", "starter": "raw = '  John DOE  '\n# Step 1: strip\n# Step 2: lowercase\n# Step 3: replace space with _\n# Step 4: print\n", "hints": ["raw.strip() removes spaces", "raw.strip().lower() lowercases", "Chain: raw.strip().lower().replace(' ', '_')", "Wrap in print()"], "vkeys": ["strip", "lower", "replace", "print"], "vpats": ["\\.strip\\(\\)", "\\.lower\\(\\)", "\\.replace\\(", "/print\\(/"]}, {"title": "User Input & Output", "icon": "⌨️", "level": "Beginner", "concept": "input() pauses your program and waits for the user to type. This makes programs interactive. IMPORTANT: input() ALWAYS returns a string — even if the user types a number.", "analogy": "print() is like sending a letter — your program talks. input() is a conversation — your program listens and waits before continuing.", "code": ["<span class=\"cc\"># input() returns a string ALWAYS</span>", "name = <span class=\"cf\">input</span>(<span class=\"cs\">\"Your name: \"</span>)", "<span class=\"cf\">print</span>(<span class=\"cs\">f\"Hi {name}!\"</span>)", "", "<span class=\"cc\"># Convert numbers manually</span>", "age = <span class=\"cf\">int</span>(<span class=\"cf\">input</span>(<span class=\"cs\">\"Age: \"</span>))  <span class=\"cc\"># string → int</span>", "<span class=\"cf\">print</span>(<span class=\"cs\">f\"Next year: {age + 1}\"</span>)", "", "<span class=\"cc\"># Float conversion</span>", "price = <span class=\"cf\">float</span>(<span class=\"cf\">input</span>(<span class=\"cs\">\"Price: \"</span>))", "tax = price * <span class=\"cn\">0.15</span>", "<span class=\"cf\">print</span>(<span class=\"cs\">f\"Total: ${price + tax:.2f}\"</span>)", "", "<span class=\"cc\"># Formatting output</span>", "<span class=\"cf\">print</span>(<span class=\"cs\">\"─\"</span> * <span class=\"cn\">30</span>)   <span class=\"cc\"># repeat a string</span>", "<span class=\"cf\">print</span>(<span class=\"cs\">f\"{\"Item\":<15}{\"Cost\":>10}\"</span>)+  <span class=\"cc\"># columns</span>"], "realWorld": "Every CLI tool (git, npm, pip) uses input/output. Setup wizards ask questions. Data entry scripts collect info. Games prompt for moves. This is where programs become tools people actually use.", "useCases": ["CLI tools", "Setup wizards", "Calculators", "Data entry", "Games"], "quiz": {"q": "User types 25 when prompted with input(). What is the type?", "opts": [{"t": "int", "ok": false, "fb": "input() doesn't auto-detect types. It always returns str."}, {"t": "str", "ok": true, "fb": "Correct! input() always returns a string, even for digits."}, {"t": "float", "ok": false, "fb": "input() returns str. You need float(input()) explicitly."}, {"t": "auto", "ok": false, "fb": "Python infers variable types, but input() specifically returns str."}]}, "challenge": "Build a tip calculator. Ask for: bill amount (float), tip percentage (int). Calculate tip and total. Print both to 2 decimal places.", "starter": "# Tip Calculator\n# Ask for bill and tip %\n", "hints": ["bill = float(input('Bill amount: '))", "tip_pct = int(input('Tip %: '))", "tip = bill * (tip_pct / 100)", "print(f'Tip: ${tip:.2f}')"], "vkeys": ["bill input", "tip input", "float", "multiply", "print"], "vpats": ["input\\(.*bill|input\\(.*amount", "input\\(.*tip|input\\(.*percent", "float\\(", "\\*", "print\\("]}, {"title": "Conditionals (if/else)", "icon": "🔀", "level": "Beginner", "concept": "Real programs make decisions. if/elif/else lets your code choose different paths based on conditions. This is where programs start feeling intelligent.", "analogy": "Think of a traffic light. Green → go. Yellow → slow. Red → stop. Your code checks a condition and takes the matching path.", "code": ["<span class=\"cc\"># if / elif / else</span>", "score = <span class=\"cn\">78</span>", "<span class=\"ck\">if</span> score >= <span class=\"cn\">90</span>:  <span class=\"cf\">print</span>(<span class=\"cs\">\"A\"</span>)", "<span class=\"ck\">elif</span> score >= <span class=\"cn\">80</span>: <span class=\"cf\">print</span>(<span class=\"cs\">\"B\"</span>)", "<span class=\"ck\">elif</span> score >= <span class=\"cn\">70</span>: <span class=\"cf\">print</span>(<span class=\"cs\">\"C\"</span>)  <span class=\"co\"># ← this runs</span>", "<span class=\"ck\">else</span>:             <span class=\"cf\">print</span>(<span class=\"cs\">\"F\"</span>)", "", "<span class=\"cc\"># Logical operators</span>", "age, has_id = <span class=\"cn\">20</span>, <span class=\"cn\">True</span>", "<span class=\"ck\">if</span> age >= <span class=\"cn\">18</span> <span class=\"ck\">and</span> has_id:", "    <span class=\"cf\">print</span>(<span class=\"cs\">\"Access granted\"</span>)", "", "<span class=\"cc\"># Ternary (one-liner)</span>", "status = <span class=\"cs\">\"adult\"</span> <span class=\"ck\">if</span> age >= <span class=\"cn\">18</span> <span class=\"ck\">else</span> <span class=\"cs\">\"minor\"</span>"], "realWorld": "Every app uses conditionals: if logged in → show dashboard, else → login page. E-commerce: if stock > 0 → Add to Cart, else → Out of Stock. Every business rule is a conditional.", "useCases": ["Auth", "Form validation", "Pricing rules", "Feature flags", "Game logic"], "quiz": {"q": "x = 5; what prints? 'big' if x > 10 else 'small'", "opts": [{"t": "big", "ok": false, "fb": "5 is not greater than 10."}, {"t": "small", "ok": true, "fb": "Correct! 5 is NOT > 10, so else branch runs."}, {"t": "Nothing", "ok": false, "fb": "Valid Python syntax — no error."}, {"t": "both", "ok": false, "fb": "Only ONE branch executes — if OR else, never both."}]}, "challenge": "BMI Calculator. Ask for weight (kg) and height (m). Calc BMI = weight / height^2. Print BMI and category: Underweight (<18.5), Normal (18.5-24.9), Overweight (25-29.9), Obese (>=30).", "starter": "# BMI Calculator\n# bmi = weight / (height ** 2)\n", "hints": ["weight = float(input('Weight kg: '))", "bmi = weight / (height ** 2)", "if bmi < 18.5: print('Underweight')", "You need if + 3 elif branches"], "vkeys": ["weight", "height", "bmi", "if/elif", "print"], "vpats": ["input\\(.*weight", "input\\(.*height", "\\*\\*\\s*2", "elif", "print\\("]}, {"title": "Loops (for & while)", "icon": "🔄", "level": "Beginner", "concept": "Loops let you repeat code. for loops iterate over a sequence. while loops run until a condition is false. Loops are Python's engine for automation.", "analogy": "A for loop is like reading a playlist — you go through each song until done. A while loop is like waiting for food — keep checking until it's ready.", "code": ["<span class=\"cc\"># for over range</span>", "<span class=\"ck\">for</span> i <span class=\"ck\">in</span> <span class=\"cf\">range</span>(<span class=\"cn\">5</span>):", "    <span class=\"cf\">print</span>(i)  <span class=\"co\"># 0 1 2 3 4</span>", "", "<span class=\"cc\"># for over a list</span>", "fruits = [<span class=\"cs\">\"apple\"</span>, <span class=\"cs\">\"banana\"</span>, <span class=\"cs\">\"cherry\"</span>]", "<span class=\"ck\">for</span> fruit <span class=\"ck\">in</span> fruits:", "    <span class=\"cf\">print</span>(fruit)", "", "<span class=\"cc\"># range(start, stop, step)</span>", "<span class=\"ck\">for</span> n <span class=\"ck\">in</span> <span class=\"cf\">range</span>(<span class=\"cn\">2</span>, <span class=\"cn\">11</span>, <span class=\"cn\">2</span>):", "    <span class=\"cf\">print</span>(n)  <span class=\"co\"># 2 4 6 8 10</span>", "", "<span class=\"cc\"># while loop</span>", "count = <span class=\"cn\">0</span>", "<span class=\"ck\">while</span> count < <span class=\"cn\">3</span>:", "    <span class=\"cf\">print</span>(count)", "    count += <span class=\"cn\">1</span>", "", "<span class=\"cc\"># enumerate — index + value</span>", "<span class=\"ck\">for</span> i, fruit <span class=\"ck\">in</span> <span class=\"cf\">enumerate</span>(fruits):", "    <span class=\"cf\">print</span>(<span class=\"cs\">f\"{i}: {fruit}\"</span>)"], "realWorld": "E-commerce loops through cart items. Data pipelines loop through millions of rows. Web scrapers loop through pages. Without loops, automation is impossible.", "useCases": ["Data processing", "Web scraping", "Game loops", "Batch jobs", "Reports"], "quiz": {"q": "How many times does range(3, 10, 2) iterate?", "opts": [{"t": "7", "ok": false, "fb": "range(3,10,2) generates 3,5,7,9 — only 4 values."}, {"t": "4", "ok": true, "fb": "Correct! 3,5,7,9 = 4 iterations."}, {"t": "3", "ok": false, "fb": "The first param is START, not count."}, {"t": "5", "ok": false, "fb": "range() doesn't divide — it steps from 3 to 9 by 2."}]}, "challenge": "Multiplication table. Ask for a number (1-12). Use a for loop to print the full table: '5 x 1 = 5', '5 x 2 = 10', ... up to 12.", "starter": "# Multiplication Table\nnum = int(input('Enter a number: '))\n", "hints": ["for i in range(1, 13): — goes 1 to 12", "result = num * i", "print(f'{num} x {i} = {result}')", "range(1, 13) includes 1 to 12"], "vkeys": ["input", "int", "for loop", "multiply", "print"], "vpats": ["input\\(", "int\\(", "for\\s+\\w+\\s+in\\s+range", "\\*", "print\\("]}, {"title": "Lists & Tuples", "icon": "📋", "level": "Intermediate", "concept": "A list is an ordered, mutable collection. Instead of 10 separate variables, store everything in one list. Tuples are like lists but immutable — once created, they never change.", "analogy": "A list is a shopping list — ordered, you can add/remove. A tuple is your birthdate (1997, 3, 15) — fixed facts that should never change.", "code": ["<span class=\"cc\"># Create and access</span>", "scores = [<span class=\"cn\">92</span>, <span class=\"cn\">85</span>, <span class=\"cn\">78</span>, <span class=\"cn\">95</span>]", "<span class=\"cf\">print</span>(scores[<span class=\"cn\">0</span>])     <span class=\"co\"># → 92</span>", "<span class=\"cf\">print</span>(scores[-<span class=\"cn\">1</span>])    <span class=\"co\"># → 95 (last)</span>", "<span class=\"cf\">print</span>(scores[<span class=\"cn\">1</span>:<span class=\"cn\">3</span>]) <span class=\"co\"># → [85, 78]</span>", "", "<span class=\"cc\"># Modify</span>", "scores.<span class=\"cf\">append</span>(<span class=\"cn\">88</span>)    <span class=\"cc\"># add to end</span>", "scores.<span class=\"cf\">insert</span>(<span class=\"cn\">0</span>, <span class=\"cn\">100</span>) <span class=\"cc\"># insert at index</span>", "scores.<span class=\"cf\">remove</span>(<span class=\"cn\">78</span>)    <span class=\"cc\"># remove by value</span>", "", "<span class=\"cc\"># Useful operations</span>", "<span class=\"cf\">print</span>(<span class=\"cf\">len</span>(scores))", "<span class=\"cf\">print</span>(<span class=\"cf\">max</span>(scores))  <span class=\"co\"># highest</span>", "<span class=\"cf\">print</span>(<span class=\"cf\">sum</span>(scores))  <span class=\"co\"># total</span>", "", "<span class=\"cc\"># Tuple — immutable</span>", "coords = (<span class=\"cn\">40.7128</span>, -<span class=\"cn\">74.006</span>)  <span class=\"cc\"># NYC</span>", "lat, lng = coords  <span class=\"cc\"># unpack</span>"], "realWorld": "Database queries return lists. Shopping carts are lists. Search results are lists. ML training data is lists of vectors. Lists unlock 80% of Python data manipulation.", "useCases": ["DB results", "Shopping carts", "Todo apps", "ML arrays", "API responses"], "quiz": {"q": "nums = [10, 20, 30, 40]. What is nums[-1]?", "opts": [{"t": "10", "ok": false, "fb": "Negative indexing starts from the END. -1 is the last item."}, {"t": "40", "ok": true, "fb": "Correct! -1 is always the last element."}, {"t": "Error", "ok": false, "fb": "Python fully supports negative indexing."}, {"t": "[10,20,30]", "ok": false, "fb": "A single index returns one item, not a slice."}]}, "challenge": "Grade tracker. Given scores = [72, 88, 65, 91, 79], print: highest, lowest, average (1 decimal), and whether the student passed (avg >= 60).", "starter": "scores = [72, 88, 65, 91, 79]\n", "hints": ["max(scores) gives highest", "min(scores) gives lowest", "avg = sum(scores) / len(scores)", "if avg >= 60: print('PASS')"], "vkeys": ["max", "min", "average", "pass/fail", "print"], "vpats": ["max\\(", "min\\(", "sum\\(", "if.*>= 60|if.*average", "print\\("]}, {"title": "Dictionaries & Sets", "icon": "📚", "level": "Intermediate", "concept": "A dictionary stores data as key-value pairs. You look up values by key. This is one of Python's most-used structures — every JSON response maps directly to a Python dictionary.", "analogy": "A dict is like a contact card. You look up the name (key) to get the phone number (value). Keys are unique; values can be anything.", "code": ["<span class=\"cc\"># Create</span>", "user = {", "    <span class=\"cs\">\"name\"</span>: <span class=\"cs\">\"Sofia\"</span>,", "    <span class=\"cs\">\"age\"</span>: <span class=\"cn\">29</span>,", "    <span class=\"cs\">\"active\"</span>: <span class=\"cn\">True</span>", "}", "", "<span class=\"cc\"># Access</span>", "<span class=\"cf\">print</span>(user[<span class=\"cs\">\"name\"</span>])        <span class=\"co\"># → Sofia</span>", "<span class=\"cf\">print</span>(user.<span class=\"cf\">get</span>(<span class=\"cs\">\"age\"</span>))   <span class=\"co\"># → 29 (safe)</span>", "<span class=\"cf\">print</span>(user.<span class=\"cf\">get</span>(<span class=\"cs\">\"phone\"</span>, <span class=\"cs\">\"N/A\"</span>)) <span class=\"co\"># default</span>", "", "<span class=\"cc\"># Add / update</span>", "user[<span class=\"cs\">\"city\"</span>] = <span class=\"cs\">\"Lagos\"</span>", "", "<span class=\"cc\"># Loop</span>", "<span class=\"ck\">for</span> key, val <span class=\"ck\">in</span> user.<span class=\"cf\">items</span>():", "    <span class=\"cf\">print</span>(<span class=\"cs\">f\"{key}: {val}\"</span>)", "", "<span class=\"cc\"># Sets — unique values only</span>", "tags = {<span class=\"cs\">\"py\"</span>, <span class=\"cs\">\"web\"</span>, <span class=\"cs\">\"py\"</span>}", "<span class=\"cf\">print</span>(tags) <span class=\"co\"># {py, web} — no dupes</span>"], "realWorld": "Every API response is JSON → Python dict. User profiles, config files, HTTP headers, database rows — all key-value. Dicts are non-negotiable for any Python developer.", "useCases": ["JSON APIs", "User profiles", "Config files", "Caching", "Frequency counting"], "quiz": {"q": "What happens when you access user['phone'] and the key doesn't exist?", "opts": [{"t": "Returns None", "ok": false, "fb": "Only .get() returns None. Bracket access raises KeyError."}, {"t": "KeyError raised", "ok": true, "fb": "Correct! Use .get() for safe access."}, {"t": "Creates the key", "ok": false, "fb": "Python never auto-creates keys."}, {"t": "Empty string", "ok": false, "fb": "Python raises KeyError for missing keys."}]}, "challenge": "Word frequency counter. Given a sentence, count how many times each word appears. Store in a dict and print it, plus the most frequent word.", "starter": "sentence = 'the cat sat on the mat the cat'\n", "hints": ["words = sentence.split()", "counts = {}", "for word in words: counts[word] = counts.get(word, 0) + 1", "most = max(counts, key=counts.get)"], "vkeys": ["split", "dict", "loop", "counting", "print"], "vpats": ["\\.split\\(", "\\{\\}", "for\\s+\\w+\\s+in", "\\.get\\(", "print\\("]}, {"title": "Functions", "icon": "⚙️", "level": "Intermediate", "concept": "A function is a named, reusable block of code. Write logic once, call it any time. Functions are how you organize real code into manageable, testable, shareable pieces.", "analogy": "A function is like a recipe. Write it once, cook it as many times as you want, with different ingredients for different results.", "code": ["<span class=\"cc\"># Define and call</span>", "<span class=\"ck\">def</span> <span class=\"cf\">greet</span>(name):", "    <span class=\"ck\">return</span> <span class=\"cs\">f\"Hello, {name}!\"</span>", "", "<span class=\"cf\">print</span>(<span class=\"cf\">greet</span>(<span class=\"cs\">\"Amara\"</span>)) <span class=\"co\"># → Hello, Amara!</span>", "", "<span class=\"cc\"># Default parameters</span>", "<span class=\"ck\">def</span> <span class=\"cf\">power</span>(base, exp=<span class=\"cn\">2</span>):", "    <span class=\"ck\">return</span> base ** exp", "", "<span class=\"cf\">print</span>(<span class=\"cf\">power</span>(<span class=\"cn\">3</span>))      <span class=\"co\"># → 9</span>", "<span class=\"cf\">print</span>(<span class=\"cf\">power</span>(<span class=\"cn\">2</span>, <span class=\"cn\">10</span>)) <span class=\"co\"># → 1024</span>", "", "<span class=\"cc\"># Multiple return values</span>", "<span class=\"ck\">def</span> <span class=\"cf\">stats</span>(nums):", "    <span class=\"ck\">return</span> <span class=\"cf\">min</span>(nums), <span class=\"cf\">max</span>(nums)", "low, high = <span class=\"cf\">stats</span>([<span class=\"cn\">3</span>,<span class=\"cn\">1</span>,<span class=\"cn\">9</span>,<span class=\"cn\">2</span>])", "", "<span class=\"cc\"># Lambda (one-liner)</span>", "square = <span class=\"ck\">lambda</span> x: x ** <span class=\"cn\">2</span>", "<span class=\"cf\">print</span>(<span class=\"cf\">square</span>(<span class=\"cn\">7</span>))  <span class=\"co\"># → 49</span>"], "realWorld": "Every meaningful operation in real code is a function: validate_email(), calculate_tax(), send_notification(). Without functions, code becomes unmaintainable.", "useCases": ["Code reuse", "API endpoints", "Data transforms", "Validation", "Utils"], "quiz": {"q": "def add(a, b=5): return a + b ... print(add(3))?", "opts": [{"t": "Error", "ok": false, "fb": "b=5 is a default parameter — totally valid."}, {"t": "8", "ok": true, "fb": "Correct! a=3, b defaults to 5, so 3+5=8."}, {"t": "3", "ok": false, "fb": "The function adds a+b, not just a."}, {"t": "None", "ok": false, "fb": "return is explicit here — it returns a value."}]}, "challenge": "Write is_palindrome(word) that returns True if the word reads the same backwards (like 'racecar'). Test it with 3+ words.", "starter": "def is_palindrome(word):\n    pass\n\nprint(is_palindrome('racecar'))  # True\nprint(is_palindrome('hello'))    # False\n", "hints": ["Reverse a string: word[::-1]", "A palindrome: word == word[::-1]", "Case-insensitive: word.lower() == word.lower()[::-1]", "Return True or False"], "vkeys": ["def", "return", "reverse", "called", "print"], "vpats": ["def\\s+is_palindrome", "return", "\\[::-1\\]", "is_palindrome\\(", "print\\("]}, {"title": "Error Handling", "icon": "🛡️", "level": "Intermediate", "concept": "Every program encounters unexpected situations — bad input, missing files, network failures. Without error handling your program crashes. try/except catches errors gracefully and keeps running.", "analogy": "Error handling is like a seatbelt. You don't plan to crash, but when something unexpected happens, you're protected. Good code anticipates what can go wrong.", "code": ["<span class=\"cc\"># try / except</span>", "<span class=\"ck\">try</span>:", "    age = <span class=\"cf\">int</span>(<span class=\"cf\">input</span>(<span class=\"cs\">\"Age: \"</span>)+)", "<span class=\"ck\">except</span> ValueError:", "    <span class=\"cf\">print</span>(<span class=\"cs\">\"Enter a valid number\"</span>)", "", "<span class=\"cc\"># Multiple exceptions</span>", "<span class=\"ck\">try</span>:", "    result = <span class=\"cn\">10</span> / <span class=\"cf\">int</span>(<span class=\"cf\">input</span>(<span class=\"cs\">\"Divisor: \"</span>))", "<span class=\"ck\">except</span> ValueError:", "    <span class=\"cf\">print</span>(<span class=\"cs\">\"Not a number\"</span>)", "<span class=\"ck\">except</span> ZeroDivisionError:", "    <span class=\"cf\">print</span>(<span class=\"cs\">\"Cannot divide by zero\"</span>)", "<span class=\"ck\">else</span>:", "    <span class=\"cf\">print</span>(<span class=\"cs\">f\"Result: {result}\"</span>) <span class=\"cc\"># no error</span>", "<span class=\"ck\">finally</span>:", "    <span class=\"cf\">print</span>(<span class=\"cs\">\"Done\"</span>)  <span class=\"cc\"># ALWAYS runs</span>", "", "<span class=\"cc\"># Raise your own errors</span>", "<span class=\"ck\">def</span> <span class=\"cf\">set_age</span>(age):", "    <span class=\"ck\">if</span> age < <span class=\"cn\">0</span>: <span class=\"ck\">raise</span> ValueError(<span class=\"cs\">\"Bad age\"</span>)"], "realWorld": "Production apps are full of try/except: API timeouts, disk full, malformed JSON, DB connection lost. Senior devs write error handling first, not as an afterthought.", "useCases": ["API calls", "File ops", "Input validation", "DB queries", "Payments"], "quiz": {"q": "When does `finally` run?", "opts": [{"t": "Only on error", "ok": false, "fb": "That is except's job. finally is unconditional."}, {"t": "Only on success", "ok": false, "fb": "That would be else. finally always runs."}, {"t": "Always", "ok": true, "fb": "Correct! finally is for cleanup — always runs no matter what."}, {"t": "Never", "ok": false, "fb": "finally always executes. It's for critical cleanup."}]}, "challenge": "Write safe_divide(a, b). Return a/b, but handle ZeroDivisionError and TypeError gracefully by returning an error string.", "starter": "def safe_divide(a, b):\n    pass\n\nprint(safe_divide(10, 2))   # 5.0\nprint(safe_divide(10, 0))   # error msg\nprint(safe_divide(10,'x'))  # error msg\n", "hints": ["try: return a / b", "except ZeroDivisionError: return 'Cannot divide by zero'", "except TypeError: return 'Inputs must be numbers'", "Chain multiple except blocks"], "vkeys": ["try", "ZeroDivisionError", "except", "def", "return"], "vpats": ["try\\s*:", "ZeroDivisionError", "except", "def\\s+safe_divide", "return"]}, {"title": "File I/O", "icon": "📁", "level": "Intermediate", "concept": "Python reads from and writes to files on disk. File I/O creates persistent data that lives beyond the program's lifetime. The 'with' statement automatically closes files when done.", "analogy": "Working with files is like a notebook. Open it, read what's there, write new notes, close it. 'with' is a self-closing binder — closes automatically when you're done.", "code": ["<span class=\"cc\"># Write a file</span>", "<span class=\"ck\">with</span> <span class=\"cf\">open</span>(<span class=\"cs\">\"notes.txt\"</span>, <span class=\"cs\">\"w\"</span>) <span class=\"ck\">as</span> f:", "    f.<span class=\"cf\">write</span>(<span class=\"cs\">\"First line\\n\"</span>)", "    f.<span class=\"cf\">write</span>(<span class=\"cs\">\"Second line\\n\"</span>)", "", "<span class=\"cc\"># Read a file</span>", "<span class=\"ck\">with</span> <span class=\"cf\">open</span>(<span class=\"cs\">\"notes.txt\"</span>, <span class=\"cs\">\"r\"</span>) <span class=\"ck\">as</span> f:", "    content = f.<span class=\"cf\">read</span>()", "    <span class=\"cf\">print</span>(content)", "", "<span class=\"cc\"># Line by line</span>", "<span class=\"ck\">with</span> <span class=\"cf\">open</span>(<span class=\"cs\">\"notes.txt\"</span>) <span class=\"ck\">as</span> f:", "    <span class=\"ck\">for</span> line <span class=\"ck\">in</span> f:", "        <span class=\"cf\">print</span>(line.<span class=\"cf\">strip</span>())", "", "<span class=\"cc\"># JSON (very common in APIs)</span>", "<span class=\"ck\">import</span> json", "data = {<span class=\"cs\">\"users\"</span>: [<span class=\"cs\">\"Alice\"</span>]}", "<span class=\"ck\">with</span> <span class=\"cf\">open</span>(<span class=\"cs\">\"data.json\"</span>, <span class=\"cs\">\"w\"</span>) <span class=\"ck\">as</span> f:", "    json.<span class=\"cf\">dump</span>(data, f, indent=<span class=\"cn\">2</span>)", "<span class=\"ck\">with</span> <span class=\"cf\">open</span>(<span class=\"cs\">\"data.json\"</span>) <span class=\"ck\">as</span> f:", "    loaded = json.<span class=\"cf\">load</span>(f)"], "realWorld": "Log files, config files, CSV exports, JSON storage, backup files — all file I/O. Data pipelines read CSVs and write results. Web servers write access logs. Even databases are files at their core.", "useCases": ["Log files", "CSV processing", "JSON config", "Data exports", "Reports"], "quiz": {"q": "Which mode appends to a file without erasing it?", "opts": [{"t": "w", "ok": false, "fb": "'w' OVERWRITES the file — all content is lost."}, {"t": "r", "ok": false, "fb": "'r' is read-only. You cannot write."}, {"t": "a", "ok": true, "fb": "Correct! 'a' positions cursor at the end, preserving existing content."}, {"t": "rw", "ok": false, "fb": "Python uses 'r+' for read-write. 'a' is the right answer here."}]}, "challenge": "Diary app. Ask the user for a diary entry. Save to diary.txt with today's date prefix. Then read the file back and print all entries.", "starter": "import datetime\n# Get entry, save with timestamp, read back\n", "hints": ["ts = datetime.datetime.now().strftime('%Y-%m-%d')", "open('diary.txt', 'a') appends", "f.write(f'{ts}: {entry}\\n')", "Then open with 'r' and print"], "vkeys": ["datetime", "input", "append mode", "read mode", "print"], "vpats": ["import datetime|from datetime", "input\\(", "open\\(.*[\"']a[\"']", "open\\(.*[\"']r[\"']", "print\\("]}, {"title": "Modules & Packages", "icon": "📦", "level": "Advanced", "concept": "Python's superpower is its ecosystem. You don't write everything from scratch — thousands of developers have written modules you can import. PyPI has over 500,000 packages for everything imaginable.", "analogy": "Modules are LEGO bricks others designed. Instead of building a wheel yourself, you import the wheel. Focus on your unique creation with pre-built pieces.", "code": ["<span class=\"cc\"># Built-in (no install needed)</span>", "<span class=\"ck\">import</span> math", "<span class=\"cf\">print</span>(math.<span class=\"cf\">sqrt</span>(<span class=\"cn\">144</span>))  <span class=\"co\"># → 12.0</span>", "<span class=\"cf\">print</span>(math.pi)       <span class=\"co\"># → 3.14159...</span>", "", "<span class=\"ck\">import</span> random", "<span class=\"cf\">print</span>(random.<span class=\"cf\">randint</span>(<span class=\"cn\">1</span>, <span class=\"cn\">6</span>)) <span class=\"co\"># dice roll</span>", "<span class=\"cf\">print</span>(random.<span class=\"cf\">choice</span>([<span class=\"cs\">\"rock\"</span>,<span class=\"cs\">\"paper\"</span>,<span class=\"cs\">\"scissors\"</span>]) )", "", "<span class=\"ck\">import</span> datetime", "today = datetime.date.<span class=\"cf\">today</span>()", "<span class=\"cf\">print</span>(today) <span class=\"co\"># → 2025-01-15</span>", "", "<span class=\"cc\"># Import specific things</span>", "<span class=\"ck\">from</span> math <span class=\"ck\">import</span> sqrt, pi", "", "<span class=\"cc\"># Third-party (pip install)</span>", "<span class=\"ck\">import</span> requests   <span class=\"cc\"># HTTP</span>", "<span class=\"ck\">import</span> pandas <span class=\"ck\">as</span> pd  <span class=\"cc\"># data</span>", "<span class=\"ck\">import</span> flask      <span class=\"cc\"># web</span>"], "realWorld": "Instead of writing HTTP from scratch, import requests. Instead of data tools, import pandas. Instead of a web framework, import Flask. Real skill is knowing which module to reach for.", "useCases": ["requests (HTTP)", "pandas (data)", "Flask (web)", "scikit-learn (ML)", "selenium (automation)"], "quiz": {"q": "How do you install a package from PyPI?", "opts": [{"t": "python install requests", "ok": false, "fb": "Python CLI has no install command — that's pip."}, {"t": "import requests", "ok": false, "fb": "import loads already-installed packages. If missing, you get ModuleNotFoundError."}, {"t": "pip install requests", "ok": true, "fb": "Correct! pip is the Python package installer."}, {"t": "get-module requests", "ok": false, "fb": "Not a Python command. pip is standard."}]}, "challenge": "Random facts generator. Use the random module to: pick a random fact from a list, roll a dice (1-6), pick a random color. Print all three.", "starter": "import random\nfacts = ['Python was created in 1991','The moon is 384,400 km away','Honey never spoils']\ncolors = ['red','blue','green','purple']\n", "hints": ["random.choice(facts)", "random.randint(1, 6)", "random.choice(colors)", "print() each result"], "vkeys": ["choice for facts", "randint", "choice for colors", "print"], "vpats": ["random\\.choice\\(facts", "random\\.randint", "random\\.choice\\(colors", "print\\("]}, {"title": "Object-Oriented Python", "icon": "🏗️", "level": "Advanced", "concept": "OOP models real-world things as objects with properties (attributes) and behaviors (methods). A class is a blueprint; an object is an instance built from it.", "analogy": "A class is an architectural blueprint. Every house built from it has the same structure but different values. Objects are the actual houses.", "code": ["<span class=\"cc\"># Define a class</span>", "<span class=\"ck\">class</span> <span class=\"cf\">BankAccount</span>:", "    <span class=\"ck\">def</span> <span class=\"cf\">__init__</span>(self, owner, bal=<span class=\"cn\">0</span>):", "        self.owner = owner", "        self.balance = bal", "", "    <span class=\"ck\">def</span> <span class=\"cf\">deposit</span>(self, amount):", "        self.balance += amount", "        <span class=\"cf\">print</span>(<span class=\"cs\">f\"Balance: ${self.balance}\"</span>)", "", "    <span class=\"ck\">def</span> <span class=\"cf\">withdraw</span>(self, amount):", "        <span class=\"ck\">if</span> amount > self.balance:", "            <span class=\"cf\">print</span>(<span class=\"cs\">\"Insufficient funds\"</span>)", "        <span class=\"ck\">else</span>: self.balance -= amount", "", "<span class=\"cc\"># Create objects</span>", "alice = <span class=\"cf\">BankAccount</span>(<span class=\"cs\">\"Alice\"</span>, <span class=\"cn\">1000</span>)", "alice.<span class=\"cf\">deposit</span>(<span class=\"cn\">500</span>)  <span class=\"co\"># Balance: $1500</span>", "", "<span class=\"cc\"># Inheritance</span>", "<span class=\"ck\">class</span> <span class=\"cf\">Savings</span>(<span class=\"cf\">BankAccount</span>):", "    <span class=\"ck\">def</span> <span class=\"cf\">interest</span>(self): self.<span class=\"cf\">deposit</span>(self.balance*<span class=\"cn\">0.05</span>)"], "realWorld": "Django uses OOP for models and views. Games use OOP for characters and levels. Payment SDKs model transactions as objects. Understanding OOP lets you read and contribute to real codebases.", "useCases": ["Django models", "Game objects", "GUI apps", "Simulations", "SDK design"], "quiz": {"q": "What is the purpose of __init__?", "opts": [{"t": "Runs at program start", "ok": false, "fb": "__init__ runs when a new OBJECT is created, not at program start."}, {"t": "Initializes a new object", "ok": true, "fb": "Correct! __init__ is the constructor — sets up attributes when you call MyClass()."}, {"t": "Defines inheritance", "ok": false, "fb": "Inheritance is in the class header: class Child(Parent)."}, {"t": "Never needed", "ok": false, "fb": "Most classes need __init__ to set initial attributes."}]}, "challenge": "Create a Student class with: name attribute, grades list. Methods: add_grade(score), average(), letter_grade() (A/B/C/D/F based on average).", "starter": "class Student:\n    def __init__(self, name):\n        self.name = name\n        self.grades = []\n\ns = Student('Alex')\ns.add_grade(85)\ns.add_grade(92)\nprint(s.average())\nprint(s.letter_grade())\n", "hints": ["def add_grade(self, score): self.grades.append(score)", "def average(self): return sum(self.grades)/len(self.grades)", "if avg >= 90: return 'A'", "Call self.average() inside letter_grade()"], "vkeys": ["class Student", "add_grade", "average", "letter_grade", "grade logic"], "vpats": ["class\\s+Student", "def\\s+add_grade", "def\\s+average", "def\\s+letter_grade", "[ABCDF]"]}, {"title": "Comprehensions & Generators", "icon": "⚡", "level": "Advanced", "concept": "List comprehensions create lists in one expressive line. Dict comprehensions do the same for dicts. Generators produce items one at a time — memory efficient for huge datasets.", "analogy": "A comprehension is a factory line: take each item, transform it, output. A generator is a vending machine — produces items on demand rather than pre-stocking everything.", "code": ["<span class=\"cc\"># Old way vs comprehension</span>", "squares_old = []", "<span class=\"ck\">for</span> i <span class=\"ck\">in</span> <span class=\"cf\">range</span>(<span class=\"cn\">10</span>):", "    squares_old.<span class=\"cf\">append</span>(i**<span class=\"cn\">2</span>)", "", "<span class=\"cc\"># Comprehension — same thing, one line!</span>", "squares = [i**<span class=\"cn\">2</span> <span class=\"ck\">for</span> i <span class=\"ck\">in</span> <span class=\"cf\">range</span>(<span class=\"cn\">10</span>)]", "<span class=\"cf\">print</span>(squares)", "", "<span class=\"cc\"># With filter</span>", "evens = [n <span class=\"ck\">for</span> n <span class=\"ck\">in</span> <span class=\"cf\">range</span>(<span class=\"cn\">20</span>) <span class=\"ck\">if</span> n%<span class=\"cn\">2</span>==<span class=\"cn\">0</span>]", "", "<span class=\"cc\"># Dict comprehension</span>", "names = [<span class=\"cs\">\"alice\"</span>,<span class=\"cs\">\"bob\"</span>,<span class=\"cs\">\"carol\"</span>]", "lens = {nm: <span class=\"cf\">len</span>(nm) <span class=\"ck\">for</span> nm <span class=\"ck\">in</span> names}", "<span class=\"co\"># {'alice':5, 'bob':3, 'carol':5}</span>", "", "<span class=\"cc\"># Generator — lazy, memory efficient</span>", "<span class=\"ck\">def</span> <span class=\"cf\">squares_gen</span>(n):", "    <span class=\"ck\">for</span> i <span class=\"ck\">in</span> <span class=\"cf\">range</span>(n): <span class=\"ck\">yield</span> i**<span class=\"cn\">2</span>", "", "<span class=\"cc\"># Sum without storing 1M items!</span>", "total = <span class=\"cf\">sum</span>(i**<span class=\"cn\">2</span> <span class=\"ck\">for</span> i <span class=\"ck\">in</span> <span class=\"cf\">range</span>(<span class=\"cn\">1000000</span>))"], "realWorld": "Every experienced Python dev uses comprehensions daily: [row['name'] for row in results if row['active']]. They turn 3 lines into 1 expressive line.", "useCases": ["Data transform", "Filtering", "Lookup maps", "Streaming", "Pipelines"], "quiz": {"q": "What does [x for x in range(10) if x % 2 == 0] produce?", "opts": [{"t": "[0,2,4,6,8]", "ok": true, "fb": "Correct! Iterates 0-9, keeps even numbers."}, {"t": "[1,3,5,7,9]", "ok": false, "fb": "x%2==0 is True for EVEN numbers."}, {"t": "[0..9]", "ok": false, "fb": "The if clause filters — only evens pass."}, {"t": "[2,4,6,8,10]", "ok": false, "fb": "range(10) starts at 0, and 0 is even so it's included."}]}, "challenge": "Using comprehensions only (no manual loops): 1) squares of 1-20, 2) only those where root is odd, 3) dict mapping 1-10 to cubes. Print all three.", "starter": "import math\n# 1. squares of 1-20\n# 2. filter: odd square roots\n# 3. dict: n -> n^3\n", "hints": ["squares = [i**2 for i in range(1, 21)]", "odd = [i**2 for i in range(1,21) if i%2==1]", "cubes = {n: n**3 for n in range(1, 11)}", "print() all three"], "vkeys": ["list comp", "filter", "dict comp", "cubes", "print"], "vpats": ["\\[.*for.*in.*range", "if.*%.*2", "\\{.*for.*in.*range", "\\*\\*\\s*3", "print\\("]}, {"title": "APIs & Web Requests", "icon": "🌐", "level": "Advanced", "concept": "APIs let Python talk to other services — fetching weather, processing payments, sending SMS, accessing AI. This is where Python becomes truly powerful for connecting the digital world.", "analogy": "An API is a waiter at a restaurant. You (Python) order. The waiter (API) goes to the kitchen (server) and brings back what you asked for.", "code": ["<span class=\"cc\"># pip install requests</span>", "<span class=\"ck\">import</span> requests", "", "<span class=\"cc\"># GET — fetch data</span>", "r = requests.<span class=\"cf\">get</span>(<span class=\"cs\">\"https://api.github.com/users/python\"</span>)", "<span class=\"cf\">print</span>(r.status_code)   <span class=\"co\"># 200 = success</span>", "data = r.<span class=\"cf\">json</span>()         <span class=\"cc\"># parse JSON</span>", "<span class=\"cf\">print</span>(data[<span class=\"cs\">\"public_repos\"</span>]) <span class=\"co\"># repo count</span>", "", "<span class=\"cc\"># Error handling</span>", "<span class=\"ck\">try</span>:", "    r = requests.<span class=\"cf\">get</span>(url, timeout=<span class=\"cn\">5</span>)", "    r.<span class=\"cf\">raise_for_status</span>()", "    result = r.<span class=\"cf\">json</span>()", "<span class=\"ck\">except</span> requests.exceptions.Timeout:", "    <span class=\"cf\">print</span>(<span class=\"cs\">\"Timed out\"</span>)", "<span class=\"ck\">except</span> requests.exceptions.HTTPError <span class=\"ck\">as</span> e:", "    <span class=\"cf\">print</span>(<span class=\"cs\">f\"Error: {e}\"</span>)", "", "<span class=\"cc\"># POST — send data</span>", "payload = {<span class=\"cs\">\"user\"</span>: <span class=\"cs\">\"alice\"</span>, <span class=\"cs\">\"score\"</span>: <span class=\"cn\">9500</span>}", "r = requests.<span class=\"cf\">post</span>(url, json=payload)"], "realWorld": "Stripe for payments, Twilio for SMS, OpenAI for AI, GitHub for code, Spotify for music. Every modern app is a network of APIs. Python devs who understand APIs can connect anything.", "useCases": ["Payments", "Email/SMS", "Weather", "GitHub automation", "AI integrations"], "quiz": {"q": "What HTTP status code means success?", "opts": [{"t": "404", "ok": false, "fb": "404 = Not Found. It's an error."}, {"t": "200", "ok": true, "fb": "Correct! 200 OK = success. Also 201 Created for POST."}, {"t": "500", "ok": false, "fb": "500 = server-side error."}, {"t": "301", "ok": false, "fb": "301 = redirect to a new URL."}]}, "challenge": "Write get_github_info(username) that fetches from api.github.com/users/{username} and prints name, public_repos, and bio. Handle errors gracefully.", "starter": "import requests\n\ndef get_github_info(username):\n    # Fetch: https://api.github.com/users/{username}\n    pass\n\nget_github_info('python')\n", "hints": ["url = f'https://api.github.com/users/{username}'", "response = requests.get(url)", "data = response.json()", "print(data.get('name', 'Unknown'))"], "vkeys": ["requests.get", "github url", "json()", "error handling", "print"], "vpats": ["requests\\.get\\(", "github\\.com", "json\\(\\)", "try|except", "print\\("]}, {"title": "Data Science Intro", "icon": "📊", "level": "Advanced", "concept": "Python dominates data science. Three libraries power everything: NumPy (fast math), Pandas (data manipulation), Matplotlib (visualization). Together they form the foundation of data analysis and ML.", "analogy": "NumPy is your sharp knife (precision operations). Pandas is your cutting board (structured data workspace). Matplotlib is your plating — presenting results beautifully.", "code": ["<span class=\"cc\"># pip install numpy pandas matplotlib</span>", "<span class=\"ck\">import</span> numpy <span class=\"ck\">as</span> np", "<span class=\"ck\">import</span> pandas <span class=\"ck\">as</span> pd", "", "<span class=\"cc\"># NumPy — vectorized math</span>", "arr = np.<span class=\"cf\">array</span>([<span class=\"cn\">1</span>,<span class=\"cn\">2</span>,<span class=\"cn\">3</span>,<span class=\"cn\">4</span>,<span class=\"cn\">5</span>])", "<span class=\"cf\">print</span>(arr * <span class=\"cn\">2</span>)   <span class=\"co\"># [2,4,6,8,10] — all at once</span>", "<span class=\"cf\">print</span>(arr.<span class=\"cf\">mean</span>()) <span class=\"co\"># → 3.0</span>", "<span class=\"cf\">print</span>(arr.<span class=\"cf\">std</span>())  <span class=\"co\"># standard deviation</span>", "", "<span class=\"cc\"># Pandas DataFrame</span>", "data = {", "    <span class=\"cs\">\"Name\"</span>:  [<span class=\"cs\">\"Alice\"</span>,<span class=\"cs\">\"Bob\"</span>,<span class=\"cs\">\"Carol\"</span>],", "    <span class=\"cs\">\"Score\"</span>: [<span class=\"cn\">92</span>, <span class=\"cn\">78</span>, <span class=\"cn\">88</span>],", "}", "df = pd.<span class=\"cf\">DataFrame</span>(data)", "<span class=\"cf\">print</span>(df)", "<span class=\"cf\">print</span>(df[df[<span class=\"cs\">\"Score\"</span>] >= <span class=\"cn\">90</span>])  <span class=\"cc\"># filter</span>", "<span class=\"cf\">print</span>(df[<span class=\"cs\">\"Score\"</span>]).<span class=\"cf\">mean</span>())   <span class=\"cc\"># average</span>"], "realWorld": "Data analysts use pandas to slice sales data and generate reports. Data scientists build ML models with numpy and scikit-learn. Python + these libraries is the lingua franca of data science.", "useCases": ["Business analysis", "ML data prep", "Finance", "Research", "Sports analytics"], "quiz": {"q": "What does df[df['Score'] > 90] return?", "opts": [{"t": "True/False per row", "ok": false, "fb": "That's df['Score']>90 alone. Wrapping in df[...] filters rows."}, {"t": "Filtered DataFrame", "ok": true, "fb": "Correct! Boolean indexing — returns only rows where Score > 90."}, {"t": "Row count", "ok": false, "fb": "For count: (df['Score']>90).sum(). Indexing filters."}, {"t": "Error", "ok": false, "fb": "This IS the standard pandas filter pattern."}]}, "challenge": "Create a pandas DataFrame with 4 products: Name, Price (float), Units (int). Add a Revenue column (Price x Units). Print the best-selling product and average price.", "starter": "import pandas as pd\n# Create DataFrame with Product, Price, Units\n", "hints": ["data = {'Product':['A','B','C','D'], 'Price':[9.99,...], 'Units':[100,...]}", "df = pd.DataFrame(data)", "df['Revenue'] = df['Price'] * df['Units']", "best = df.loc[df['Revenue'].idxmax(), 'Product']"], "vkeys": ["pandas import", "DataFrame", "Revenue", "best seller", "mean"], "vpats": ["import pandas", "pd\\.DataFrame", "Price.*Units|\\*", "max|idxmax", "mean\\("]}] ;
+
+
+// ===== STATE =====
+let currentModule = 0;
+let xp = 0, streak = 0, isTyping = false;
+let chatHistory = [];
+let moduleCompleted = {};
+
+// Load progress (from Supabase if logged in, localStorage always)
+async function initProgress() {
+  let data = {};
+  try {
+    if (window.CC) {
+      data = await window.CC.loadProgress('python');
+    } else {
+      data = JSON.parse(localStorage.getItem('cc_progress_python') || '{}');
+    }
+  } catch(e) {
+    data = JSON.parse(localStorage.getItem('cc_progress_python') || '{}');
+  }
+  xp = data.xp || 0;
+  streak = data.streak || 0;
+  moduleCompleted = data.completed || {};
+}
+
+let currentUser = null;
+
+function getLevelInfo(x) {
+  if (x < 50)  return 'Python Beginner';
+  if (x < 150) return 'Python Learner';
+  if (x < 300) return 'Python Coder';
+  if (x < 500) return 'Python Developer';
+  return 'Python Pro';
+}
+
+function saveProgress() {
+  const data = { xp, streak, completed: moduleCompleted };
+  localStorage.setItem('cc_progress_python', JSON.stringify(data));
+  if (window.CC) window.CC.saveProgress('python', data);
+}
+
+// ===== RENDER =====
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderLesson(idx) {
+  currentModule = idx;
+  const m = MODULES[idx];
+
+  document.getElementById('module-title').textContent =
+    'Module ' + String(idx+1).padStart(2,'0') + ' \u2014 ' + m.title;
+  document.getElementById('module-breadcrumb').textContent =
+    'Python Course \u203a ' + m.level + ' Track';
+  document.getElementById('level-badge').textContent = m.level;
+
+  document.querySelectorAll('.module-item').forEach(function(el, i) {
+    el.classList.toggle('active', i === idx);
+  });
+
+  const panel = document.getElementById('lesson-panel');
+  const done = moduleCompleted[idx];
+
+  let html = '';
+
+  // Completion banner
+  if (done) {
+    html += '<div class="completion-banner show">' +
+      '<span style="font-size:1.5rem">🏆</span>' +
+      '<div><div class="cb-title">Module Complete!</div>' +
+      '<div class="cb-sub">Already completed. Review anytime.</div></div></div>';
+  }
+
+  // Code lines
+  const codeHtml = m.code.map(function(line) {
+    return '<div class="code-line">' + (line === '' ? '&nbsp;' : line) + '</div>';
+  }).join('');
+
+  // Lesson card
+  html += '<div class="lesson-card">' +
+    '<div class="card-header">' +
+      '<div class="card-icon">' + m.icon + '</div>' +
+      '<div class="card-meta">' +
+        '<div class="card-title">' + m.title + '</div>' +
+        '<div class="card-subtitle">Module ' + String(idx+1).padStart(2,'0') + ' \u00b7 ' + m.level + ' Track</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="card-body">' +
+      '<div class="concept-box"><h4>🧠 Core Concept</h4><p>' + m.concept + '</p></div>' +
+      '<div class="analogy-box"><h4>💡 Think of it this way</h4><p>' + m.analogy + '</p></div>' +
+      '<div class="code-label"><span style="color:var(--accent2)">●</span>&nbsp;Code Example</div>' +
+      '<div class="code-block"><div class="code-lines">' + codeHtml + '</div></div>' +
+      '<div class="rw-box"><h4>🌍 Real-world use</h4><p>' + m.realWorld + '</p></div>' +
+      '<div class="code-label">Used in:</div>' +
+      '<div class="use-cases">' + m.useCases.map(function(u) {
+        return '<span class="use-case-tag">' + u + '</span>';
+      }).join('') + '</div>' +
+    '</div>' +
+  '</div>';
+
+  // Quiz options
+  const quizOpts = m.quiz.opts.map(function(o, i) {
+    return '<button class="quiz-opt" onclick="checkAnswer(' + i + ')">' +
+      '<span class="quiz-opt-letter">' + String.fromCharCode(65+i) + '</span>' +
+      o.t + '</button>';
+  }).join('');
+
+  // Quiz card
+  html += '<div class="quiz-card">' +
+    '<div class="card-header">' +
+      '<div class="card-icon">✅</div>' +
+      '<div class="card-meta"><div class="card-title">Knowledge Check</div>' +
+      '<div class="card-subtitle">Pick the best answer · +15 XP</div></div>' +
+    '</div>' +
+    '<div class="card-body">' +
+      '<div class="quiz-question">' + m.quiz.q + '</div>' +
+      '<div class="quiz-opts" id="quiz-opts">' + quizOpts + '</div>' +
+      '<div class="quiz-feedback" id="quiz-feedback"></div>' +
+    '</div>' +
+  '</div>';
+
+  // Hints
+  const hintsHtml = m.hints.map(function(h, i) {
+    return '<button class="hint-btn" onclick="showHint(' + i + ')">💡 Hint ' + (i+1) + '</button>';
+  }).join('');
+
+  // Challenge card
+  const nextLabel = idx < MODULES.length - 1 ? 'Continue to next lesson →' : '🎉 Course Complete!';
+  html += '<div class="challenge-card">' +
+    '<div class="card-header">' +
+      '<div class="card-icon">💻</div>' +
+      '<div class="card-meta"><div class="card-title">Coding Challenge</div>' +
+      '<div class="card-subtitle">Write real code · +25 XP</div></div>' +
+    '</div>' +
+    '<div class="card-body">' +
+      '<div class="challenge-desc">' + m.challenge + '</div>' +
+      '<textarea class="code-editor" id="code-editor" spellcheck="false">' + m.starter + '</textarea>' +
+      '<div class="hints-section">' + hintsHtml + '</div>' +
+      '<div class="hint-display" id="hint-display" style="display:none"></div>' +
+      '<button class="submit-btn" onclick="checkCode()">▶ Check My Code</button>' +
+      '<div class="code-result" id="code-result" style="display:none"></div>' +
+    '</div>' +
+  '</div>';
+
+  // Next
+  html += '<div class="next-section">' +
+    '<button class="next-btn" onclick="nextModule()">' + nextLabel + '</button>' +
+  '</div>';
+
+  panel.innerHTML = html;
+  panel.scrollTop = 0;
+}
+
+// ===== QUIZ =====
+var quizAnswered = false;
+function checkAnswer(i) {
+  if (quizAnswered) return;
+  quizAnswered = true;
+  const m = MODULES[currentModule];
+  const opt = m.quiz.opts[i];
+  const buttons = document.querySelectorAll('#quiz-opts .quiz-opt');
+  const fb = document.getElementById('quiz-feedback');
+
+  buttons.forEach(function(btn, j) {
+    btn.disabled = true;
+    if (m.quiz.opts[j].ok) btn.classList.add('correct');
+    else if (j === i && !opt.ok) btn.classList.add('wrong');
+  });
+
+  if (opt.ok) {
+    fb.className = 'quiz-feedback correct';
+    fb.innerHTML = '✅ ' + opt.fb + ' <strong>+15 XP</strong>';
+    addXP(15);
+  } else {
+    fb.className = 'quiz-feedback wrong';
+    fb.innerHTML = '❌ ' + opt.fb;
+  }
+}
+
+// ===== CHALLENGE =====
+function showHint(n) {
+  const m = MODULES[currentModule];
+  if (n >= m.hints.length) return;
+  const d = document.getElementById('hint-display');
+  d.style.display = 'block';
+  d.innerHTML = '💡 <strong>Hint ' + (n+1) + ':</strong> ' + m.hints[n];
+}
+
+function checkCode() {
+  const code = document.getElementById('code-editor').value;
+  const m = MODULES[currentModule];
+  const result = document.getElementById('code-result');
+  result.style.display = 'block';
+
+  const missing = [];
+  for (var i = 0; i < m.vkeys.length; i++) {
+    try {
+      const rx = new RegExp(m.vpats[i], 'i');
+      if (!rx.test(code)) missing.push(m.vkeys[i]);
+    } catch(e) { /* skip bad regex */ }
+  }
+
+  if (missing.length === 0) {
+    result.className = 'code-result success';
+    result.innerHTML = '✅ <strong>Excellent work!</strong> Your solution covers all requirements. +25 XP!';
+    addXP(25);
+    moduleCompleted[currentModule] = true;
+    saveProgress();
+    const dot = document.getElementById('dot-' + currentModule);
+    if (dot) dot.className = 'status-dot dot-done';
+    updateProgressBar();
+  } else {
+    result.className = 'code-result partial';
+    result.innerHTML = '⚠️ Almost there! Still working on: <strong>' + missing.join(', ') + '</strong>. Try the hints!';
+  }
+}
+
+// ===== XP =====
+function addXP(amount) {
+  xp += amount;
+  saveProgress();
+  document.getElementById('xp-badge').textContent = '⚡ ' + xp + ' XP';
+  document.getElementById('xp-top').textContent = '⚡ ' + xp + ' XP';
+  const lv = getLevelInfo(xp);
+  document.getElementById('level-badge').textContent = lv;
+  document.getElementById('user-level').textContent = lv;
+  const t = document.getElementById('xp-toast');
+  t.textContent = '+' + amount + ' XP!';
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 2000);
+}
+
+// ===== NAV =====
+function selectModule(idx) {
+  quizAnswered = false;
+  renderLesson(idx);
+}
+
+function nextModule() {
+  if (currentModule < MODULES.length - 1) {
+    quizAnswered = false;
+    selectModule(currentModule + 1);
+  }
+}
+
+// ===== PROGRESS BAR =====
+function updateProgressBar() {
+  const done = Object.keys(moduleCompleted).filter(function(k) { return moduleCompleted[k]; }).length;
+  const pct = Math.min(100, Math.round((done / MODULES.length) * 100));
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('pct-label').textContent = pct + '%';
+}
+
+// ===== SIDEBAR =====
+function buildSidebar() {
+  const list = document.getElementById('module-list');
+  list.innerHTML = '';
+  const sections = [
+    { label:'BEGINNER',     color:'var(--accent2)', from:0,  to:5  },
+    { label:'INTERMEDIATE', color:'var(--accent3)', from:5,  to:10 },
+    { label:'ADVANCED',     color:'#c084fc',        from:10, to:15 },
+  ];
+  sections.forEach(function(sec) {
+    const h = document.createElement('div');
+    h.className = 'section-header';
+    h.innerHTML = '<span class="section-dot" style="background:' + sec.color + '"></span>' + sec.label;
+    list.appendChild(h);
+    for (var i = sec.from; i < sec.to; i++) {
+      (function(idx) {
+        const item = document.createElement('div');
+        item.className = 'module-item' + (idx === 0 ? ' active' : '');
+        item.onclick = function() { selectModule(idx); };
+        const dotCls = moduleCompleted[idx] ? 'dot-done' : (idx === 0 ? 'dot-active' : 'dot-empty');
+        item.innerHTML =
+          '<span class="module-num-text">' + String(idx+1).padStart(2,'0') + '</span>' +
+          '<span class="module-name-text">' + MODULES[idx].title + '</span>' +
+          '<span class="status-dot ' + dotCls + '" id="dot-' + idx + '"></span>';
+        list.appendChild(item);
+      })(i);
+    }
+  });
+}
+
+// ===== CHAT =====
+function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text || isTyping) return;
+  input.value = '';
+  appendMsg('user', text);
+  chatHistory.push({ role:'user', content:text });
+  callCoach(text);
+}
+
+function quickPrompt(t) {
+  document.getElementById('chat-input').value = t;
+  sendMessage();
+}
+
+function appendMsg(role, text) {
+  const feed = document.getElementById('chat-feed');
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.innerHTML = '<div class="msg-sender">' + (role==='coach' ? '🐍 Coach Py' : '👤 You') + '</div>' +
+    '<div class="msg-bubble">' + text.replace(/\n/g,'<br>') + '</div>';
+  feed.appendChild(div);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+async function callCoach(userMsg) {
+  isTyping = true;
+  const m = MODULES[currentModule];
+  const feed = document.getElementById('chat-feed');
+  const typing = document.createElement('div');
+  typing.className = 'msg coach'; typing.id = 'typing-ind';
+  typing.innerHTML = '<div class="msg-sender">🐍 Coach Py</div><div class="msg-bubble">' +
+    '<div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+  feed.appendChild(typing);
+  feed.scrollTop = feed.scrollHeight;
+
+  const sys = 'You are Coach Py, a friendly Python tutor. Current module: "' + m.title + '" (' + m.level + '). ' +
+    'Topic: ' + m.concept + ' Guide with questions and hints — never give direct answers. Keep responses to 2-3 sentences.';
+
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'x-api-key': window.ANTHROPIC_API_KEY || '' },
+      body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:300, system:sys, messages:chatHistory })
+    });
+    const data = await r.json();
+    document.getElementById('typing-ind')?.remove();
+    const reply = data.content && data.content[0] ? data.content[0].text
+      : '⚠️ API error: ' + (data.error?.message || 'Check your API key.');
+    chatHistory.push({ role:'assistant', content:reply });
+    appendMsg('coach', reply);
+  } catch(e) {
+    document.getElementById('typing-ind')?.remove();
+    appendMsg('coach', "Can't connect right now. Add your Anthropic API key at console.anthropic.com to enable me! 🔑");
+  }
+  isTyping = false;
+}
+
+// ===== INIT =====
+
+function updateUserUI() {
+  if (!currentUser) return;
+  const name = window.CC ? window.CC.getDisplayName(currentUser) : (currentUser.name || 'Learner');
+  const el = document.getElementById('user-name');
+  const av = document.getElementById('user-avatar');
+  if (el) el.textContent = name;
+  if (av) av.textContent = name[0].toUpperCase();
+}
+async function init() {
+  // Load progress + auth state
+  await initProgress();
+  if (window.CC) {
+    currentUser = await window.CC.getUser();
+    window.CC.onAuthChange(u => { currentUser = u; updateUserUI(); });
+  } else {
+    try { currentUser = JSON.parse(localStorage.getItem('cc_user') || 'null'); } catch(e) {}
+  }
+  buildSidebar();
+  updateProgressBar();
+
+  const lv = getLevelInfo(xp);
+  document.getElementById('xp-badge').textContent = '⚡ ' + xp + ' XP';
+  document.getElementById('xp-top').textContent = '⚡ ' + xp + ' XP';
+  document.getElementById('streak-badge').textContent = '🔥 ' + streak;
+  document.getElementById('level-badge').textContent = lv;
+  document.getElementById('user-level').textContent = lv;
+
+  if (currentUser) {
+    document.getElementById('user-name').textContent = currentUser.name || 'Learner';
+    document.getElementById('user-avatar').textContent = (currentUser.name || 'L')[0].toUpperCase();
+  }
+
+  const feed = document.getElementById('chat-feed');
+  feed.innerHTML = '<div class="msg coach"><div class="msg-sender">🐍 Coach Py</div>' +
+    '<div class="msg-bubble">Hey! I\'m Coach Py, your Python learning companion 🐍 I\'ll guide you with hints and questions — not give away answers — so you truly understand. What would you like to explore about <strong>' + MODULES[0].title + '</strong>?</div></div>';
+
+  document.getElementById('chat-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  renderLesson(0);
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+# ============================================================
+# CodeCoach Academy — Netlify Configuration
+# ============================================================
+# Deploy steps:
+#   1. Push this repo to GitHub
+#   2. Go to netlify.com → Add new site → Import from Git
+#   3. Set build command and publish dir (below)
+#   4. Add environment variables in Netlify UI:
+#        Site Settings → Environment Variables
+#        SUPABASE_URL        = https://xxxx.supabase.co
+#        SUPABASE_ANON_KEY   = eyJ...
+#        ANTHROPIC_API_KEY   = sk-ant-... (optional, for server-side proxy)
+# ============================================================
+
+[build]
+  publish   = "."          # whole repo is the site (no build step needed)
+  command   = "node inject-env.js"   # injects env vars into a tiny JS file
+
+# ── REDIRECTS ─────────────────────────────────────────────
+[[redirects]]
+  from = "/app"
+  to   = "/courses/python/app.html"
+  status = 302
+
+[[redirects]]
+  from = "/python"
+  to   = "/courses/python/app.html"
+  status = 302
+
+# Fallback: SPA-style 404 → index
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
+  conditions = { Role = [""] }   # only applies if file doesn't exist
+
+# ── HEADERS ──────────────────────────────────────────────
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options           = "SAMEORIGIN"
+    X-Content-Type-Options    = "nosniff"
+    Referrer-Policy           = "strict-origin-when-cross-origin"
+    Permissions-Policy        = "camera=(), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

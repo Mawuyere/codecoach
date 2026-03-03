@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeCoach Academy — Learn Tech with an AI Coach</title>
+<meta name="description" content="Interactive tech courses powered by AI coaching. Python, Cloud, Linux, DevOps and more. Free to start, no setup required.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800;900&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/auth.js" defer></script>
+<style>
+/* ── RESET & TOKENS ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+:root {
+  --ink:   #0b0e17;
+  --ink2:  #131722;
+  --ink3:  #1c2235;
+  --line:  #252d40;
+  --line2: #2f3a54;
+  --fog:   #6b7a9e;
+  --mist:  #9aaabf;
+  --snow:  #e8edf8;
+  --gold:  #f5c842;
+  --gold2: #ffd84d;
+  --aqua:  #3ec9a7;
+  --blue:  #4da6ff;
+  --red:   #ff5c57;
+  --py1:   #306998;
+  --py2:   #ffd343;
+  --r: 14px;
+  --r-sm: 8px;
+}
+html { scroll-behavior: smooth; font-size: 16px; }
+body {
+  background: var(--ink);
+  color: var(--snow);
+  font-family: 'DM Mono', monospace;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* ── ANIMATED BG ────────────────────────────────────────── */
+.bg-layer {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  overflow: hidden;
+}
+.bg-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(77,166,255,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(77,166,255,.05) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+.bg-blob {
+  position: absolute; border-radius: 50%; filter: blur(80px); opacity: .18;
+}
+.b1 { width: 700px; height: 700px; background: var(--py1); top: -200px; left: -150px; animation: drift 18s ease-in-out infinite alternate; }
+.b2 { width: 500px; height: 500px; background: var(--py2); top: 40%; right: -180px; animation: drift 22s ease-in-out infinite alternate-reverse; }
+.b3 { width: 400px; height: 400px; background: var(--aqua); bottom: 0; left: 30%; animation: drift 15s ease-in-out infinite alternate; }
+@keyframes drift { from { transform: translate(0,0) scale(1); } to { transform: translate(30px, 40px) scale(1.06); } }
+
+/* ── NAV ────────────────────────────────────────────────── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .85rem 2.5rem;
+  background: rgba(11,14,23,.82);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--line);
+}
+.logo { display: flex; align-items: center; gap: .6rem; text-decoration: none; }
+.logo-mark {
+  width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--py1) 30%, var(--py2));
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif; font-weight: 900; font-size: .8rem; color: #fff;
+}
+.logo-text {
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1rem; color: var(--snow);
+}
+.logo-text em { color: var(--gold); font-style: normal; }
+
+.nav-links { display: flex; gap: 2rem; }
+.nav-links a {
+  font-size: .72rem; color: var(--fog); text-decoration: none;
+  letter-spacing: .04em; transition: color .2s;
+}
+.nav-links a:hover { color: var(--snow); }
+
+.nav-actions { display: flex; gap: .6rem; align-items: center; }
+
+.btn { display: inline-flex; align-items: center; gap: .4rem; border: none; border-radius: var(--r-sm); font-family: 'DM Mono', monospace; cursor: pointer; transition: all .18s; text-decoration: none; white-space: nowrap; }
+.btn-sm { padding: .38rem .9rem; font-size: .68rem; }
+.btn-md { padding: .6rem 1.3rem; font-size: .78rem; }
+.btn-lg { padding: .8rem 1.8rem; font-size: .88rem; font-family: 'Syne', sans-serif; font-weight: 700; }
+.btn-ghost { background: transparent; border: 1px solid var(--line2); color: var(--fog); }
+.btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+.btn-gold { background: var(--gold); color: #000; font-weight: 700; }
+.btn-gold:hover { background: var(--gold2); transform: translateY(-1px); box-shadow: 0 6px 22px rgba(245,200,66,.28); }
+.btn-outline-snow { background: transparent; border: 1px solid rgba(232,237,248,.2); color: var(--snow); }
+.btn-outline-snow:hover { border-color: var(--blue); color: var(--blue); }
+
+/* Nav user chip */
+.nav-user { display: none; align-items: center; gap: .55rem; }
+.nav-avatar {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--py1), var(--blue));
+  display: flex; align-items: center; justify-content: center;
+  font-size: .62rem; font-weight: 700; color: #fff; font-family: 'Syne', sans-serif;
+}
+.nav-uname { font-size: .7rem; color: var(--mist); }
+
+/* ── HERO ────────────────────────────────────────────────── */
+.hero {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center;
+  min-height: 100vh; padding: 8rem 2rem 5rem;
+}
+
+.tag-pill {
+  display: inline-flex; align-items: center; gap: .45rem;
+  padding: .28rem .9rem;
+  background: rgba(245,200,66,.07); border: 1px solid rgba(245,200,66,.22);
+  border-radius: 99px; font-size: .62rem; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--gold);
+  margin-bottom: 2rem;
+  animation: fadeUp .6s ease both;
+}
+.tag-dot { width: 5px; height: 5px; background: var(--gold); border-radius: 50%; animation: blink 2s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.hero-h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(2.8rem, 7vw, 5.8rem);
+  font-weight: 900; line-height: 1.03; letter-spacing: -.025em;
+  margin-bottom: 1.5rem;
+  animation: fadeUp .7s .1s ease both;
+}
+.hero-h1 .hi {
+  background: linear-gradient(120deg, var(--py2) 0%, var(--blue) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-sub {
+  font-size: .95rem; color: var(--fog); max-width: 520px;
+  line-height: 1.85; margin-bottom: 2.5rem;
+  animation: fadeUp .7s .2s ease both;
+}
+
+.hero-cta {
+  display: flex; gap: .85rem; flex-wrap: wrap; justify-content: center;
+  margin-bottom: 4rem;
+  animation: fadeUp .7s .3s ease both;
+}
+
+.hero-stats {
+  display: flex; gap: 3rem;
+  animation: fadeUp .7s .4s ease both;
+}
+.stat-val { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 900; }
+.stat-val b { color: var(--gold); font-style: normal; }
+.stat-key { font-size: .6rem; color: var(--fog); text-transform: uppercase; letter-spacing: .12em; margin-top: 2px; }
+
+@keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+
+/* ── SECTION WRAPPER ───────────────────────────────────── */
+.section { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 6rem 2rem; }
+.section-kicker { font-size: .62rem; letter-spacing: .2em; text-transform: uppercase; color: var(--aqua); margin-bottom: .8rem; }
+.section-h2 { font-family: 'Syne', sans-serif; font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 800; line-height: 1.12; margin-bottom: .85rem; }
+.section-sub { color: var(--fog); font-size: .82rem; line-height: 1.9; max-width: 480px; margin-bottom: 2.75rem; }
+
+hr.rule { border: none; border-top: 1px solid var(--line); margin: 0 2rem; }
+
+/* ── COURSE GRID ──────────────────────────────────────── */
+.courses { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.15rem; }
+
+.course-card {
+  background: var(--ink2); border: 1px solid var(--line);
+  border-radius: var(--r); padding: 1.6rem;
+  position: relative; overflow: hidden;
+  transition: border-color .22s, transform .22s, box-shadow .22s;
+  text-decoration: none; color: inherit; display: block;
+}
+.course-card::before {
+  content: ''; position: absolute; inset: 0;
+  background: var(--card-shine, transparent);
+  opacity: 0; transition: opacity .3s; border-radius: var(--r);
+}
+.course-card:hover::before { opacity: 1; }
+.course-card.live {
+  border-color: rgba(245,200,66,.3);
+  --card-shine: radial-gradient(ellipse at 0% 0%, rgba(245,200,66,.07) 0%, transparent 60%);
+}
+.course-card.live:hover { border-color: rgba(245,200,66,.55); transform: translateY(-3px); box-shadow: 0 12px 36px rgba(0,0,0,.35); }
+.course-card.soon { opacity: .52; pointer-events: none; }
+
+.card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.1rem; }
+.card-icon { width: 44px; height: 44px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
+
+.pill { padding: .2rem .6rem; border-radius: 99px; font-size: .58rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; border: 1px solid; }
+.pill-live { background: rgba(62,201,167,.1); color: var(--aqua); border-color: rgba(62,201,167,.28); }
+.pill-soon { background: rgba(107,122,158,.1); color: var(--fog); border-color: rgba(107,122,158,.2); }
+.pill-hot  { background: rgba(255,92,87,.1); color: var(--red); border-color: rgba(255,92,87,.25); }
+
+.card-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.05rem; margin-bottom: .35rem; }
+.card-desc { font-size: .7rem; color: var(--fog); line-height: 1.72; margin-bottom: 1.1rem; }
+.card-meta { display: flex; gap: .85rem; font-size: .62rem; color: var(--fog); }
+
+.progress-rail { height: 2px; background: var(--line); border-radius: 99px; margin-top: 1.1rem; overflow: hidden; }
+.progress-car  { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--py1), var(--py2)); transition: width .7s ease; }
+
+/* ── HOW IT WORKS ─────────────────────────────────────── */
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 2rem; margin-top: 3rem; }
+.step-n {
+  width: 46px; height: 46px; border-radius: 11px;
+  background: var(--ink3); border: 1px solid var(--line2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 800; color: var(--gold);
+  margin-bottom: .9rem;
+}
+.step-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: .88rem; margin-bottom: .4rem; }
+.step-desc { font-size: .7rem; color: var(--fog); line-height: 1.75; }
+
+/* ── FEATURES ─────────────────────────────────────────── */
+.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(255px, 1fr)); gap: 1.1rem; }
+.feat {
+  background: var(--ink2); border: 1px solid var(--line);
+  border-radius: var(--r); padding: 1.4rem;
+  transition: border-color .2s;
+}
+.feat:hover { border-color: var(--line2); }
+.feat-ico { font-size: 1.4rem; margin-bottom: .65rem; }
+.feat-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: .87rem; margin-bottom: .35rem; }
+.feat-desc { font-size: .7rem; color: var(--fog); line-height: 1.75; }
+
+/* ── STACK CALLOUT ──────────────────────────────────────── */
+.stack-box {
+  background: var(--ink2); border: 1px solid var(--line);
+  border-radius: var(--r); padding: 2.5rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;
+  align-items: start;
+}
+.stack-item { display: flex; gap: .75rem; }
+.stack-ico { font-size: 1.2rem; flex-shrink: 0; margin-top: 2px; }
+.stack-title { font-family: 'Syne', sans-serif; font-size: .82rem; font-weight: 700; margin-bottom: .25rem; }
+.stack-desc { font-size: .68rem; color: var(--fog); line-height: 1.7; }
+.stack-badge { display: inline-block; padding: .12rem .45rem; background: rgba(62,201,167,.12); border: 1px solid rgba(62,201,167,.25); border-radius: 99px; font-size: .58rem; color: var(--aqua); margin-top: .3rem; }
+
+/* ── CTA BANNER ────────────────────────────────────────── */
+.cta-banner {
+  background: var(--ink2); border: 1px solid var(--line);
+  border-radius: var(--r); padding: 4rem 3rem; text-align: center;
+  position: relative; overflow: hidden;
+}
+.cta-banner::before {
+  content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 60%; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+/* ── FOOTER ─────────────────────────────────────────────── */
+footer {
+  position: relative; z-index: 1;
+  background: var(--ink2); border-top: 1px solid var(--line);
+  padding: 2.75rem 2rem; text-align: center;
+}
+.foot-logo { font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 800; margin-bottom: .4rem; }
+.foot-logo em { color: var(--gold); font-style: normal; }
+.foot-sub { font-size: .68rem; color: var(--fog); margin-bottom: 1.25rem; }
+.foot-links { display: flex; justify-content: center; gap: 1.75rem; flex-wrap: wrap; }
+.foot-links a { font-size: .68rem; color: var(--fog); text-decoration: none; transition: color .2s; }
+.foot-links a:hover { color: var(--gold); }
+
+/* ── AUTH MODAL ─────────────────────────────────────────── */
+.overlay {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(11,14,23,.88); backdrop-filter: blur(12px);
+  align-items: center; justify-content: center;
+}
+.overlay.open { display: flex; }
+.modal {
+  background: var(--ink2); border: 1px solid var(--line2);
+  border-radius: var(--r); padding: 2.5rem;
+  width: 100%; max-width: 410px; position: relative;
+  animation: pop .22s cubic-bezier(.175,.885,.32,1.275) both;
+}
+@keyframes pop { from { opacity:0; transform:scale(.93) translateY(10px); } to { opacity:1; transform:scale(1) translateY(0); } }
+.modal-x {
+  position: absolute; top: 1rem; right: 1rem;
+  background: none; border: none; color: var(--fog);
+  font-size: 1.1rem; cursor: pointer; width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; transition: all .15s;
+}
+.modal-x:hover { background: var(--ink3); color: var(--snow); }
+.modal h2 { font-family: 'Syne', sans-serif; font-size: 1.3rem; font-weight: 800; margin-bottom: .3rem; }
+.modal-desc { font-size: .7rem; color: var(--fog); margin-bottom: 1.75rem; }
+
+.tab-row { display: flex; background: var(--ink3); border-radius: 8px; padding: 3px; margin-bottom: 1.5rem; }
+.tab {
+  flex: 1; padding: .45rem; background: none; border: none;
+  color: var(--fog); font-family: 'DM Mono', monospace; font-size: .7rem;
+  cursor: pointer; border-radius: 6px; transition: all .17s;
+}
+.tab.on { background: var(--ink2); color: var(--snow); box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+
+label.fl { display: block; font-size: .6rem; letter-spacing: .1em; text-transform: uppercase; color: var(--fog); margin-bottom: .35rem; }
+.fi {
+  width: 100%; padding: .65rem .85rem;
+  background: var(--ink3); border: 1px solid var(--line2);
+  border-radius: var(--r-sm); color: var(--snow);
+  font-family: 'DM Mono', monospace; font-size: .78rem;
+  outline: none; transition: border-color .17s; margin-bottom: .9rem;
+}
+.fi:focus { border-color: var(--gold); }
+
+.err-box {
+  background: rgba(255,92,87,.08); border: 1px solid rgba(255,92,87,.25);
+  border-radius: 7px; padding: .55rem .85rem;
+  font-size: .68rem; color: var(--red); margin-bottom: .9rem; display: none;
+}
+.err-box.on { display: block; }
+
+.btn-full { width: 100%; justify-content: center; padding: .72rem; }
+
+.or { display: flex; align-items: center; gap: .85rem; margin: 1.1rem 0; }
+.or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.or span { font-size: .62rem; color: var(--fog); }
+
+.g-btn {
+  width: 100%; padding: .65rem; display: flex; align-items: center; justify-content: center; gap: .55rem;
+  background: transparent; border: 1px solid var(--line2); border-radius: var(--r-sm);
+  color: var(--snow); font-family: 'DM Mono', monospace; font-size: .72rem; cursor: pointer; transition: all .17s;
+}
+.g-btn:hover { border-color: var(--blue); background: rgba(77,166,255,.05); }
+
+/* ── TOAST ──────────────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 1.75rem; right: 1.75rem; z-index: 300;
+  background: var(--ink3); border: 1px solid var(--line2);
+  border-radius: 10px; padding: .75rem 1.1rem;
+  font-size: .72rem; max-width: 310px;
+  display: flex; align-items: center; gap: .5rem;
+  transform: translateY(60px); opacity: 0; transition: all .25s;
+}
+.toast.up { transform: translateY(0); opacity: 1; }
+.toast.ok { border-color: rgba(62,201,167,.4); }
+.toast.bad { border-color: rgba(255,92,87,.4); }
+
+/* ── RESPONSIVE ─────────────────────────────────────────── */
+@media(max-width:768px){
+  .nav-links { display: none; }
+  .hero-stats { gap: 1.5rem; flex-wrap: wrap; justify-content: center; }
+  .stack-box { grid-template-columns: 1fr; }
+  .btn-ghost.nav-hide { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-layer">
+  <div class="bg-grid"></div>
+  <div class="bg-blob b1"></div>
+  <div class="bg-blob b2"></div>
+  <div class="bg-blob b3"></div>
+</div>
+
+<!-- ══ NAV ══════════════════════════════════════════════════ -->
+<nav>
+  <a href="index.html" class="logo">
+    <div class="logo-mark">CC</div>
+    <span class="logo-text">Code<em>Coach</em></span>
+  </a>
+
+  <div class="nav-links">
+    <a href="#courses">Courses</a>
+    <a href="#how-it-works">How it works</a>
+    <a href="#stack">Tech stack</a>
+    <a href="#features">Features</a>
+  </div>
+
+  <!-- Shown when logged out -->
+  <div class="nav-actions" id="nav-logged-out">
+    <button class="btn btn-sm btn-ghost nav-hide" onclick="openModal('login')">Sign in</button>
+    <button class="btn btn-sm btn-gold" onclick="openModal('signup')">Get started free</button>
+  </div>
+
+  <!-- Shown when logged in -->
+  <div class="nav-user" id="nav-logged-in">
+    <div class="nav-avatar" id="nav-avatar">G</div>
+    <span class="nav-uname" id="nav-uname">Guest</span>
+    <button class="btn btn-sm btn-ghost" onclick="doSignOut()">Sign out</button>
+    <a href="courses/python/app.html" class="btn btn-sm btn-gold" style="text-decoration:none">Open App →</a>
+  </div>
+</nav>
+
+<!-- ══ HERO ══════════════════════════════════════════════════ -->
+<div class="hero">
+  <div class="tag-pill"><div class="tag-dot"></div>AI-Powered Learning Platform</div>
+
+  <h1 class="hero-h1">
+    Master tech skills<br>with an AI <span class="hi">coach</span><br>in your corner
+  </h1>
+
+  <p class="hero-sub">
+    Interactive courses on Python, Cloud, Linux & more — with a live AI tutor that guides you without handing over the answers. No setup. No credit card.
+  </p>
+
+  <div class="hero-cta">
+    <a href="courses/python/app.html" class="btn btn-lg btn-gold">🐍 Start Python — it's free →</a>
+    <button class="btn btn-lg btn-outline-snow" onclick="openModal('signup')">👤 Create account</button>
+  </div>
+
+  <div class="hero-stats">
+    <div class="stat"><div class="stat-val">15<b>+</b></div><div class="stat-key">Python Modules</div></div>
+    <div class="stat"><div class="stat-val">60<b>+</b></div><div class="stat-key">Challenges</div></div>
+    <div class="stat"><div class="stat-val"><b>AI</b></div><div class="stat-key">Live Coach</div></div>
+    <div class="stat"><div class="stat-val">100<b>%</b></div><div class="stat-key">Free to Start</div></div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ══ COURSES ════════════════════════════════════════════════ -->
+<div class="section" id="courses">
+  <div class="section-kicker">// All Courses</div>
+  <h2 class="section-h2">Pick your learning path</h2>
+  <p class="section-sub">Start with Python — our fully-launched track. More subjects ship throughout 2025.</p>
+
+  <div class="courses">
+
+    <!-- PYTHON — LIVE -->
+    <a href="courses/python/app.html" class="course-card live" id="card-python">
+      <div class="card-top">
+        <div class="card-icon" style="background:linear-gradient(135deg,rgba(48,105,152,.35),rgba(255,211,67,.2))">🐍</div>
+        <span class="pill pill-live">● Live</span>
+      </div>
+      <div class="card-name">Python</div>
+      <div class="card-desc">From zero to advanced — variables, loops, OOP, APIs, data science. 15 project-grounded modules with real coding challenges at every step.</div>
+      <div class="card-meta"><span>📚 15 modules</span><span>⏱ Beginner → Advanced</span><span>🆓 Free</span></div>
+      <div class="progress-rail"><div class="progress-car" id="py-bar" style="width:0%"></div></div>
+    </a>
+
+    <!-- CLOUD -->
+    <div class="course-card soon">
+      <div class="card-top"><div class="card-icon" style="background:rgba(77,166,255,.12)">☁️</div><span class="pill pill-hot">🔥 Coming Soon</span></div>
+      <div class="card-name">Cloud Computing</div>
+      <div class="card-desc">AWS, Azure & GCP fundamentals — serverless, IAM, storage, cost optimization, and real deployments. Prep for cloud certifications.</div>
+      <div class="card-meta"><span>📚 ~14 modules</span><span>⏱ Beginner → Advanced</span></div>
+    </div>
+
+    <!-- AI / ML -->
+    <div class="course-card soon">
+      <div class="card-top"><div class="card-icon" style="background:rgba(62,201,167,.12)">🤖</div><span class="pill pill-hot">🔥 Coming Soon</span></div>
+      <div class="card-name">AI & Machine Learning</div>
+      <div class="card-desc">ML foundations, neural networks, LLMs, and prompt engineering. Build and deploy real models. No PhD required.</div>
+      <div class="card-meta"><span>📚 ~16 modules</span><span>⏱ Intermediate</span></div>
+    </div>
+
+    <!-- DOCKER -->
+    <div class="course-card soon">
+      <div class="card-top"><div class="card-icon" style="background:rgba(77,166,255,.1)">🐳</div><span class="pill pill-soon">Coming Soon</span></div>
+      <div class="card-name">Docker & Containers</div>
+      <div class="card-desc">Docker, Compose, Kubernetes basics, and container-native CI/CD. Industry-standard skills at every modern tech company.</div>
+      <div class="card-meta"><span>📚 ~12 modules</span><span>⏱ Beginner → Intermediate</span></div>
+    </div>
+
+    <!-- LINUX -->
+    <div class="course-card soon">
+      <div class="card-top"><div class="card-icon" style="background:rgba(255,92,87,.1)">🐧</div><span class="pill pill-soon">Coming Soon</span></div>
+      <div class="card-name">Linux</div>
+      <div class="card-desc">CLI mastery, shell scripting, permissions, processes, cron, systemd. Linux fluency is non-negotiable in any tech role.</div>
+      <div class="card-meta"><span>📚 ~14 modules</span><span>⏱ Beginner → Intermediate</span></div>
+    </div>
+
+    <!-- NETWORKING -->
+    <div class="course-card soon">
+      <div class="card-top"><div class="card-icon" style="background:rgba(245,200,66,.1)">🌐</div><span class="pill pill-soon">Coming Soon</span></div>
+      <div class="card-name">Networking</div>
+      <div class="card-desc">TCP/IP, DNS, HTTP, subnets, firewalls, VPNs. Understand how the internet actually works and configure networks like a pro.</div>
+      <div class="card-meta"><span>📚 ~13 modules</span><span>⏱ Beginner → Advanced</span></div>
+    </div>
+
+    <!-- CYBERSECURITY -->
+    <div class="course-card soon">
+      <div class="card-top"><div class="card-icon" style="background:rgba(255,92,87,.1)">🔐</div><span class="pill pill-soon">Coming Soon</span></div>
+      <div class="card-name">Cybersecurity</div>
+      <div class="card-desc">Ethical hacking, OWASP top 10, cryptography, penetration testing basics, and building secure applications from the ground up.</div>
+      <div class="card-meta"><span>📚 ~15 modules</span><span>⏱ Beginner → Advanced</span></div>
+    </div>
+
+    <!-- DEVOPS -->
+    <div class="course-card soon">
+      <div class="card-top"><div class="card-icon" style="background:rgba(62,201,167,.1)">⚙️</div><span class="pill pill-soon">Coming Soon</span></div>
+      <div class="card-name">DevOps & CI/CD</div>
+      <div class="card-desc">Git workflows, GitHub Actions, Terraform, monitoring, and the culture of modern DevOps. Ship faster, break less.</div>
+      <div class="card-meta"><span>📚 ~13 modules</span><span>⏱ Intermediate</span></div>
+    </div>
+
+    <!-- WEB DEV -->
+    <div class="course-card soon">
+      <div class="card-top"><div class="card-icon" style="background:rgba(77,166,255,.1)">💻</div><span class="pill pill-soon">Coming Soon</span></div>
+      <div class="card-name">Web Development</div>
+      <div class="card-desc">HTML, CSS, JavaScript, React, and REST APIs. Build real interactive sites from scratch with modern best practices throughout.</div>
+      <div class="card-meta"><span>📚 ~18 modules</span><span>⏱ Beginner → Advanced</span></div>
+    </div>
+
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ══ HOW IT WORKS ═══════════════════════════════════════════ -->
+<div class="section" id="how-it-works">
+  <div class="section-kicker">// How it works</div>
+  <h2 class="section-h2">Learn by doing,<br>coached by AI</h2>
+  <p class="section-sub">Structured curriculum meets adaptive AI guidance — you're never stuck and never handed the answer.</p>
+
+  <div class="steps">
+    <div class="step"><div class="step-n">01</div><div class="step-title">Read the concept</div><div class="step-desc">Clear explanations, analogies, and annotated code — one idea at a time, no fluff.</div></div>
+    <div class="step"><div class="step-n">02</div><div class="step-title">See real-world use</div><div class="step-desc">Every concept shown in practical code you'd actually write on a real job or project.</div></div>
+    <div class="step"><div class="step-n">03</div><div class="step-title">Take the quiz</div><div class="step-desc">Knowledge checks with instant feedback and real explanations — not just right or wrong.</div></div>
+    <div class="step"><div class="step-n">04</div><div class="step-title">Code the challenge</div><div class="step-desc">Write real code in your browser. Get specific feedback validated against test cases.</div></div>
+    <div class="step"><div class="step-n">05</div><div class="step-title">Ask Coach anything</div><div class="step-desc">Stuck? Your AI coach guides with Socratic hints — never spoiling the answer for you.</div></div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ══ TECH STACK ═══════════════════════════════════════════ -->
+<div class="section" id="stack">
+  <div class="section-kicker">// Infrastructure</div>
+  <h2 class="section-h2">Built on the best<br>free tools available</h2>
+  <p class="section-sub">No vendor lock-in. All services have generous free tiers. You own your data.</p>
+
+  <div class="stack-box">
+    <div class="stack-item">
+      <div class="stack-ico">🔐</div>
+      <div>
+        <div class="stack-title">Supabase — Auth & Database</div>
+        <div class="stack-desc">Email + Google OAuth, row-level security, and a Postgres database for progress storage. Free tier: 50k users, 500MB DB.</div>
+        <span class="stack-badge">Free tier: 50k users</span>
+      </div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-ico">🚀</div>
+      <div>
+        <div class="stack-title">Netlify — Hosting & CI/CD</div>
+        <div class="stack-desc">Automatic deploys on every git push, CDN edge delivery, custom domains, and HTTPS. Free tier: unlimited personal projects.</div>
+        <span class="stack-badge">Free tier: unlimited projects</span>
+      </div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-ico">🐙</div>
+      <div>
+        <div class="stack-title">GitHub — Version Control</div>
+        <div class="stack-desc">Source of truth. Branch protection, issues tracking, pull requests, and CI workflow triggers via GitHub Actions.</div>
+        <span class="stack-badge">Free: unlimited public repos</span>
+      </div>
+    </div>
+    <div class="stack-item">
+      <div class="stack-ico">🤖</div>
+      <div>
+        <div class="stack-title">Anthropic Claude — AI Coach</div>
+        <div class="stack-desc">Powers Coach Py with the Claude API. Each session makes direct API calls. Bring your own API key or wire in a proxy.</div>
+        <span class="stack-badge">$5 free credit to start</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ══ FEATURES ═══════════════════════════════════════════════ -->
+<div class="section" id="features">
+  <div class="section-kicker">// Features</div>
+  <h2 class="section-h2">Everything you need<br>to actually learn</h2>
+  <p class="section-sub">Not a passive video course. A genuinely interactive environment that holds you accountable.</p>
+
+  <div class="features">
+    <div class="feat"><div class="feat-ico">🤖</div><div class="feat-title">Socratic AI Coach</div><div class="feat-desc">Coach Py asks guiding questions rather than giving answers — building real understanding, not dependency.</div></div>
+    <div class="feat"><div class="feat-ico">📊</div><div class="feat-title">XP & Progress Tracking</div><div class="feat-desc">XP points, streaks, per-module completion. Saved to your account and synced across all your devices.</div></div>
+    <div class="feat"><div class="feat-ico">💻</div><div class="feat-title">In-browser Coding</div><div class="feat-desc">Write and submit real code directly in the app — validated against real test patterns. Zero local setup.</div></div>
+    <div class="feat"><div class="feat-ico">🔐</div><div class="feat-title">Secure Auth</div><div class="feat-desc">Email or Google sign-in via Supabase. Row-level security ensures you only ever see your own progress.</div></div>
+    <div class="feat"><div class="feat-ico">🌍</div><div class="feat-title">Real-world Examples</div><div class="feat-desc">Every concept taught with code patterns you'd find in production — not pointless toy examples.</div></div>
+    <div class="feat"><div class="feat-ico">🆓</div><div class="feat-title">Free, No Gotchas</div><div class="feat-desc">No credit card. No paywall mid-lesson. The full Python course is free. Forever.</div></div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<!-- ══ CTA ════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="cta-banner">
+    <div class="section-kicker" style="margin-bottom:.85rem">// Start today</div>
+    <h2 class="section-h2" style="font-size:2.1rem;margin-bottom:.85rem">Your Python journey<br>starts in 10 seconds.</h2>
+    <p style="color:var(--fog);font-size:.82rem;line-height:1.9;margin-bottom:2rem">No setup. No credit card. Just you, a browser, and a coach that wants you to succeed.</p>
+    <div style="display:flex;gap:.85rem;justify-content:center;flex-wrap:wrap">
+      <a href="courses/python/app.html" class="btn btn-lg btn-gold">🐍 Open Python Course →</a>
+      <button class="btn btn-lg btn-outline-snow" onclick="openModal('signup')">Create free account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ FOOTER ══════════════════════════════════════════════════ -->
+<footer>
+  <div class="foot-logo">Code<em>Coach</em> Academy</div>
+  <div class="foot-sub">Built with ❤️ and AI. Your personal path from zero to engineer.</div>
+  <div class="foot-links">
+    <a href="courses/python/app.html">Python Course</a>
+    <a href="#courses">All Courses</a>
+    <a href="https://github.com" target="_blank">GitHub</a>
+    <a href="#" onclick="openModal('signup')">Sign Up</a>
+    <a href="#stack">Tech Stack</a>
+  </div>
+  <div style="margin-top:1.25rem;font-size:.58rem;color:var(--line2)">© 2025 CodeCoach Academy — Open source. Free to learn.</div>
+</footer>
+
+<!-- ══ AUTH MODAL ═════════════════════════════════════════════ -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <button class="modal-x" onclick="closeModal()">✕</button>
+    <h2 id="modal-h">Welcome back</h2>
+    <p class="modal-desc" id="modal-desc">Sign in to save your progress across all courses.</p>
+
+    <div class="tab-row">
+      <button class="tab on" id="tab-in"  onclick="switchTab('login')">Sign In</button>
+      <button class="tab"    id="tab-up"  onclick="switchTab('signup')">Create Account</button>
+    </div>
+
+    <div class="err-box" id="err-box"></div>
+
+    <!-- LOGIN -->
+    <div id="f-login">
+      <label class="fl">Email</label>
+      <input type="email" class="fi" id="l-email" placeholder="you@example.com">
+      <label class="fl">Password</label>
+      <input type="password" class="fi" id="l-pass" placeholder="••••••••">
+      <button class="btn btn-gold btn-full" id="btn-login" onclick="doLogin()">Sign In</button>
+    </div>
+
+    <!-- SIGNUP -->
+    <div id="f-signup" style="display:none">
+      <label class="fl">Your name</label>
+      <input type="text" class="fi" id="s-name" placeholder="Ada Lovelace">
+      <label class="fl">Email</label>
+      <input type="email" class="fi" id="s-email" placeholder="you@example.com">
+      <label class="fl">Password</label>
+      <input type="password" class="fi" id="s-pass" placeholder="At least 8 characters">
+      <button class="btn btn-gold btn-full" id="btn-signup" onclick="doSignup()">Create Free Account</button>
+    </div>
+
+    <div class="or"><span>or</span></div>
+
+    <button class="g-btn" onclick="doGoogle()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Continue with Google
+    </button>
+    <p style="text-align:center;font-size:.62rem;color:var(--fog);margin-top:1rem">Progress saved securely via Supabase.</p>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── MODAL ──────────────────────────────────────────────────
+function openModal(tab) {
+  document.getElementById('overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  switchTab(tab || 'login');
+}
+function closeModal() {
+  document.getElementById('overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function switchTab(t) {
+  document.getElementById('f-login').style.display  = t === 'login'  ? 'block' : 'none';
+  document.getElementById('f-signup').style.display = t === 'signup' ? 'block' : 'none';
+  document.getElementById('tab-in').classList.toggle('on', t === 'login');
+  document.getElementById('tab-up').classList.toggle('on', t === 'signup');
+  document.getElementById('modal-h').textContent    = t === 'login' ? 'Welcome back' : 'Join CodeCoach';
+  document.getElementById('modal-desc').textContent = t === 'login' ? 'Sign in to save your progress.' : 'Free forever. No credit card needed.';
+  clearErr();
+}
+document.getElementById('overlay').addEventListener('click', e => { if (e.target.id === 'overlay') closeModal(); });
+
+function showErr(msg) {
+  const el = document.getElementById('err-box');
+  el.textContent = msg; el.classList.add('on');
+}
+function clearErr() { document.getElementById('err-box').classList.remove('on'); }
+
+// ── TOAST ──────────────────────────────────────────────────
+function toast(msg, type = 'ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast up ' + type;
+  setTimeout(() => t.classList.remove('up'), 3500);
+}
+
+// ── AUTH ACTIONS ───────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('l-email').value.trim();
+  const pass  = document.getElementById('l-pass').value;
+  if (!email || !pass) { showErr('Please fill in all fields.'); return; }
+  const btn = document.getElementById('btn-login');
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try {
+    const user = await window.CC.signIn(email, pass);
+    closeModal();
+    toast('👋 Welcome back, ' + window.CC.getDisplayName(user) + '!');
+    setLoggedIn(user);
+    loadPyProgress();
+  } catch(e) { showErr(e.message); }
+  btn.disabled = false; btn.textContent = 'Sign In';
+}
+
+async function doSignup() {
+  const name  = document.getElementById('s-name').value.trim();
+  const email = document.getElementById('s-email').value.trim();
+  const pass  = document.getElementById('s-pass').value;
+  if (!name || !email || !pass) { showErr('Please fill in all fields.'); return; }
+  if (pass.length < 8) { showErr('Password must be at least 8 characters.'); return; }
+  const btn = document.getElementById('btn-signup');
+  btn.disabled = true; btn.textContent = 'Creating account…';
+  try {
+    const { user, needsConfirmation } = await window.CC.signUp(email, pass, name);
+    closeModal();
+    if (needsConfirmation) {
+      toast('📧 Check your email to confirm your account!');
+    } else {
+      toast('🎉 Welcome, ' + name + '! Let\'s start learning.');
+      setLoggedIn(user);
+    }
+  } catch(e) { showErr(e.message); }
+  btn.disabled = false; btn.textContent = 'Create Free Account';
+}
+
+async function doGoogle() {
+  try { await window.CC.signInWithGoogle(); }
+  catch(e) { showErr(e.message); }
+}
+
+async function doSignOut() {
+  await window.CC.signOut();
+  setLoggedOut();
+  toast('👋 Signed out.');
+}
+
+// ── NAV STATE ──────────────────────────────────────────────
+function setLoggedIn(user) {
+  const name    = window.CC.getDisplayName(user);
+  const initial = name[0].toUpperCase();
+  document.getElementById('nav-avatar').textContent = initial;
+  document.getElementById('nav-uname').textContent  = name;
+  document.getElementById('nav-logged-out').style.display = 'none';
+  document.getElementById('nav-logged-in').style.display  = 'flex';
+}
+function setLoggedOut() {
+  document.getElementById('nav-logged-out').style.display = 'flex';
+  document.getElementById('nav-logged-in').style.display  = 'none';
+}
+
+// ── PROGRESS BAR ───────────────────────────────────────────
+async function loadPyProgress() {
+  const data = await window.CC.loadProgress('python');
+  const done = Object.keys(data.completed || {}).filter(k => data.completed[k]).length;
+  const pct  = Math.min(100, Math.round((done / 15) * 100));
+  if (pct > 0) setTimeout(() => { document.getElementById('py-bar').style.width = pct + '%'; }, 400);
+}
+
+// ── INIT ───────────────────────────────────────────────────
+(async function init() {
+  // Wait for auth.js to load
+  await new Promise(r => {
+    if (window.CC) { r(); return; }
+    document.querySelector('script[src="js/auth.js"]').addEventListener('load', r);
+    setTimeout(r, 1500); // fallback
+  });
+
+  const user = await window.CC.getUser();
+  if (user) {
+    setLoggedIn(user);
+    loadPyProgress();
+  }
+
+  // React to auth changes (e.g. Google OAuth redirect)
+  window.CC.onAuthChange(u => {
+    if (u) { setLoggedIn(u); loadPyProgress(); }
+    else setLoggedOut();
+  });
+
+  // Load local progress even for guests
+  const local = JSON.parse(localStorage.getItem('cc_progress_python') || '{}');
+  const done = Object.keys(local.completed || {}).filter(k => local.completed[k]).length;
+  const pct  = Math.min(100, Math.round((done / 15) * 100));
+  if (pct > 0) setTimeout(() => { document.getElementById('py-bar').style.width = pct + '%'; }, 600);
+})();
+</script>
+</body>
+</html>
