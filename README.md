@@ -78,7 +78,7 @@ cd codecoach
 #### Option B: Connect GitHub (recommended — auto-deploys on push)
 1. Netlify → Add new site → **Import from Git** → choose your fork
 2. Build settings:
-   - **Build command:** `node inject-env.js`
+   - **Build command:** *(leave empty)*
    - **Publish directory:** `.`
 3. Add environment variables (same as above)
 4. Deploy → done. Every push to `main` auto-deploys.
@@ -162,9 +162,15 @@ window.__ENV__ = {
 ## Adding a new course
 
 1. Create `courses/YOUR_COURSE/app.html` (copy Python app as template)
-2. Update `index.html` — change the card from `class="course-card soon"` to `class="course-card live"` and add the `href`
+2. Update `index.html` — change the card from `class="course-card soon"` to `class="course-card live"` and point the link to `/courses/YOUR_COURSE/app`
 3. Add a `loadProgress('YOUR_COURSE')` call in the landing page init
 4. Commit and push — Netlify auto-deploys
+
+### Clean routes (recommended)
+
+- Home page: `/`
+- Python course: `/courses/python/app`
+- Legacy `.html` paths still work via redirects, but use extensionless links going forward.
 
 ---
 
