@@ -14,25 +14,23 @@
 
 [build]
   publish   = "."          # whole repo is the site (no build step needed)
-  command   = "node inject-env.js"   # injects env vars into a tiny JS file
 
 # ── REDIRECTS ─────────────────────────────────────────────
 [[redirects]]
   from = "/app"
   to   = "/courses/python/app.html"
-  status = 302
+  status = 301
 
 [[redirects]]
   from = "/python"
   to   = "/courses/python/app.html"
-  status = 302
+  status = 301
 
 # Fallback: SPA-style 404 → index
 [[redirects]]
   from   = "/*"
   to     = "/index.html"
   status = 200
-  conditions = { Role = [""] }   # only applies if file doesn't exist
 
 # ── HEADERS ──────────────────────────────────────────────
 [[headers]]
