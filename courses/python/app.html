@@ -20,13 +20,35 @@ html, body { height:100%; overflow:hidden; }
 body { background:var(--bg); color:var(--text); font-family:'JetBrains Mono',monospace; }
 
 /* ── APP LAYOUT ── */
-.app { display:flex; height:100vh; }
+.app {
+  display:flex;
+  height:100vh;
+  height:100dvh;
+  min-height:100vh;
+  position:relative;
+}
 
 /* ── SIDEBAR ── */
 .sidebar {
-  width:240px; min-width:240px; background:var(--surface);
+  width:280px; min-width:280px; background:var(--surface);
   border-right:1px solid var(--border);
   display:flex; flex-direction:column; overflow:hidden;
+  position:fixed; top:0; left:0; bottom:0;
+  z-index:220;
+  transform:translateX(-105%);
+  transition:transform 0.2s ease;
+  box-shadow:16px 0 34px rgba(0,0,0,0.45);
+}
+.app.sidebar-open .sidebar {
+  transform:translateX(0);
+}
+.sidebar-backdrop {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.5);
+  z-index:210;
+}
+.app.sidebar-open .sidebar-backdrop {
+  display:block;
 }
 .logo {
   padding:1rem 1.25rem; border-bottom:1px solid var(--border);
@@ -115,7 +137,7 @@ body { background:var(--bg); color:var(--text); font-family:'JetBrains Mono',mon
 }
 
 /* ── MAIN PANEL ── */
-.main { flex:1; display:flex; flex-direction:column; overflow:hidden; min-height:0; }
+.main { flex:1; display:flex; flex-direction:column; overflow:hidden; min-height:0; width:100%; }
 
 .top-bar {
   height:52px; border-bottom:1px solid var(--border);
@@ -129,6 +151,20 @@ body { background:var(--bg); color:var(--text); font-family:'JetBrains Mono',mon
   font-size:0.6rem; color:var(--muted); margin-top:1px;
 }
 .top-bar-right { display:flex; gap:0.5rem; align-items:center; }
+.sidebar-toggle-btn {
+  padding:0.35rem 0.65rem; border-radius:8px;
+  border:1px solid var(--border); background:var(--surface2);
+  color:var(--text); font-family:'JetBrains Mono',monospace;
+  font-size:0.65rem; cursor:pointer; transition:all 0.15s;
+}
+.sidebar-toggle-btn:hover { border-color:var(--accent); color:var(--accent); }
+.coach-toggle-btn {
+  padding:0.35rem 0.75rem; border-radius:8px;
+  border:1px solid var(--border); background:var(--surface2);
+  color:var(--text); font-family:'JetBrains Mono',monospace;
+  font-size:0.65rem; cursor:pointer; transition:all 0.15s;
+}
+.coach-toggle-btn:hover { border-color:var(--accent3); color:var(--accent3); }
 .level-chip {
   padding:0.2rem 0.65rem; border-radius:99px; font-size:0.6rem; font-weight:600;
   background:rgba(247,201,72,0.12); color:var(--accent); border:1px solid rgba(247,201,72,0.3);
@@ -140,7 +176,7 @@ body { background:var(--bg); color:var(--text); font-family:'JetBrains Mono',mon
 
 /* ── CONTENT AREA ── */
 .content-area {
-  flex:1; display:flex; overflow:hidden; min-height:0;
+  flex:1; display:flex; overflow:hidden; min-height:0; position:relative;
 }
 
 /* ── LESSON PANEL ── */
@@ -309,9 +345,24 @@ body { background:var(--bg); color:var(--text); font-family:'JetBrains Mono',mon
 /* ── CHAT PANEL ── */
 .chat-panel {
   width:320px; min-width:320px; border-left:1px solid var(--border);
-  display:flex; flex-direction:column; background:var(--surface);
+  display:none; flex-direction:column; background:var(--surface);
   min-height:0;
 }
+.content-area.chat-open .chat-panel { display:flex; }
+
+.chat-backdrop {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.45); z-index:190;
+}
+.content-area.chat-open .chat-backdrop { display:block; }
+
+.chat-close-btn {
+  margin-left:auto; padding:0.15rem 0.45rem;
+  border:1px solid var(--border); border-radius:6px;
+  background:var(--surface2); color:var(--muted);
+  cursor:pointer; font-size:0.72rem;
+}
+.chat-close-btn:hover { border-color:var(--accent3); color:var(--accent3); }
 .chat-header {
   padding:0.85rem 1rem; border-bottom:1px solid var(--border);
   display:flex; align-items:center; gap:0.6rem; flex-shrink:0;
@@ -400,6 +451,38 @@ body { background:var(--bg); color:var(--text); font-family:'JetBrains Mono',mon
   z-index:100; pointer-events:none;
 }
 #xp-toast.show { transform:translateY(0); opacity:1; }
+
+@media (max-width: 980px) {
+  .app { height:100dvh; }
+  .top-bar { padding:0 0.8rem; }
+  .top-bar-left h2 { font-size:0.82rem; }
+  .top-bar-left p { font-size:0.56rem; }
+  .sidebar-toggle-btn { padding:0.3rem 0.58rem; font-size:0.6rem; }
+  .coach-toggle-btn { padding:0.3rem 0.58rem; font-size:0.6rem; }
+  .level-chip, .xp-chip { display:none; }
+  .lesson-panel {
+    padding:1rem 0.85rem calc(1rem + env(safe-area-inset-bottom));
+  }
+
+  .content-area.chat-open .chat-panel {
+    position:fixed;
+    left:0; right:0; bottom:0;
+    top:auto;
+    width:auto; min-width:0;
+    height:min(74dvh, 640px);
+    border-left:none;
+    border-top:1px solid var(--border);
+    border-top-left-radius:14px;
+    border-top-right-radius:14px;
+    z-index:200;
+    box-shadow:0 -8px 30px rgba(0,0,0,0.45);
+  }
+
+  .chat-header { padding:0.7rem 0.8rem; }
+  .chat-feed { padding:0.6rem; }
+  .quick-prompts { padding:0.35rem 0.5rem; }
+  .chat-input-row { padding:0.45rem 0.5rem calc(0.45rem + env(safe-area-inset-bottom)); }
+}
 </style>
 </head>
 <body>
@@ -440,6 +523,8 @@ body { background:var(--bg); color:var(--text); font-family:'JetBrains Mono',mon
     </div>
   </div>
 
+  <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
+
   <!-- MAIN -->
   <div class="main">
     <div class="top-bar">
@@ -448,25 +533,30 @@ body { background:var(--bg); color:var(--text); font-family:'JetBrains Mono',mon
         <p id="module-breadcrumb">Python Course › Beginner Track</p>
       </div>
       <div class="top-bar-right">
+        <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" onclick="toggleSidebar()">☰ Modules</button>
+        <button class="coach-toggle-btn" id="coach-toggle-btn" onclick="toggleCoachPanel()">💬 Talk to Coach</button>
         <span class="level-chip" id="level-badge">Beginner</span>
         <span class="xp-chip" id="xp-top">⚡ 0 XP</span>
       </div>
     </div>
 
-    <div class="content-area">
+    <div class="content-area" id="content-area">
       <!-- LESSON PANEL -->
       <div class="lesson-panel" id="lesson-panel">
         <div style="color:var(--muted);font-size:0.8rem;padding:2rem;text-align:center">Loading...</div>
       </div>
 
+      <div class="chat-backdrop" id="chat-backdrop" onclick="closeCoachPanel()"></div>
+
       <!-- CHAT PANEL -->
-      <div class="chat-panel">
+      <div class="chat-panel" id="chat-panel">
         <div class="chat-header">
           <div class="coach-avatar">🐍</div>
           <div>
             <div class="coach-name">Coach Py</div>
             <div class="coach-status">● Online · ready to help</div>
           </div>
+          <button class="chat-close-btn" onclick="closeCoachPanel()">✕</button>
         </div>
 
         <div class="chat-feed" id="chat-feed"></div>
@@ -499,6 +589,50 @@ let currentModule = 0;
 let xp = 0, streak = 0, isTyping = false;
 let chatHistory = [];
 let moduleCompleted = {};
+let coachOpen = false;
+let sidebarOpen = false;
+
+function openSidebar() {
+  sidebarOpen = true;
+  const app = document.querySelector('.app');
+  const btn = document.getElementById('sidebar-toggle-btn');
+  if (app) app.classList.add('sidebar-open');
+  if (btn) btn.textContent = '✕ Close';
+}
+
+function closeSidebar() {
+  sidebarOpen = false;
+  const app = document.querySelector('.app');
+  const btn = document.getElementById('sidebar-toggle-btn');
+  if (app) app.classList.remove('sidebar-open');
+  if (btn) btn.textContent = '☰ Modules';
+}
+
+function toggleSidebar() {
+  if (sidebarOpen) closeSidebar();
+  else openSidebar();
+}
+
+function openCoachPanel() {
+  coachOpen = true;
+  const content = document.getElementById('content-area');
+  const btn = document.getElementById('coach-toggle-btn');
+  if (content) content.classList.add('chat-open');
+  if (btn) btn.textContent = 'Close Coach';
+}
+
+function closeCoachPanel() {
+  coachOpen = false;
+  const content = document.getElementById('content-area');
+  const btn = document.getElementById('coach-toggle-btn');
+  if (content) content.classList.remove('chat-open');
+  if (btn) btn.textContent = '💬 Talk to Coach';
+}
+
+function toggleCoachPanel() {
+  if (coachOpen) closeCoachPanel();
+  else openCoachPanel();
+}
 
 // Load progress (from Supabase if logged in, localStorage always)
 async function initProgress() {
@@ -763,7 +897,10 @@ function buildSidebar() {
       (function(idx) {
         const item = document.createElement('div');
         item.className = 'module-item' + (idx === 0 ? ' active' : '');
-        item.onclick = function() { selectModule(idx); };
+        item.onclick = function() {
+          selectModule(idx);
+          if (window.innerWidth <= 1200) closeSidebar();
+        };
         const dotCls = moduleCompleted[idx] ? 'dot-done' : (idx === 0 ? 'dot-active' : 'dot-empty');
         item.innerHTML =
           '<span class="module-num-text">' + String(idx+1).padStart(2,'0') + '</span>' +
@@ -874,6 +1011,13 @@ async function init() {
 
   document.getElementById('chat-input').addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeSidebar();
+      if (coachOpen) closeCoachPanel();
+    }
   });
 
   renderLesson(0);
