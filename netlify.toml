@@ -18,13 +18,28 @@
 # ── REDIRECTS ─────────────────────────────────────────────
 [[redirects]]
   from = "/app"
-  to   = "/courses/python/app.html"
+  to   = "/courses/python/app"
   status = 301
 
 [[redirects]]
   from = "/python"
-  to   = "/courses/python/app.html"
+  to   = "/courses/python/app"
   status = 301
+
+[[redirects]]
+  from = "/index.html"
+  to   = "/"
+  status = 301
+
+[[redirects]]
+  from = "/courses/python/app.html"
+  to   = "/courses/python/app"
+  status = 301
+
+[[redirects]]
+  from = "/courses/python/app"
+  to   = "/courses/python/app.html"
+  status = 200
 
 # Fallback: SPA-style 404 → index
 [[redirects]]
