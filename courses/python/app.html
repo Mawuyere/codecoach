@@ -452,6 +452,18 @@ body { background:var(--bg); color:var(--text); font-family:'JetBrains Mono',mon
 }
 #xp-toast.show { transform:translateY(0); opacity:1; }
 
+.study-footnote {
+  border-top:1px solid var(--border);
+  background:var(--surface);
+  color:var(--muted);
+  font-size:0.58rem;
+  letter-spacing:0.08em;
+  text-transform:lowercase;
+  text-align:center;
+  padding:0.45rem 0.8rem calc(0.45rem + env(safe-area-inset-bottom));
+  flex-shrink:0;
+}
+
 @media (max-width: 980px) {
   .app { height:100dvh; }
   .top-bar { padding:0 0.8rem; }
@@ -574,6 +586,8 @@ body { background:var(--bg); color:var(--text); font-family:'JetBrains Mono',mon
         </div>
       </div>
     </div>
+
+    <div class="study-footnote">developed by mawuyere.ai</div>
   </div>
 </div>
 
